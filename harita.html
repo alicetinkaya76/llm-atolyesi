@@ -1,0 +1,432 @@
+<title>Sıfırdan LLM Yol Haritası</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #f6f9f8;
+    --surface: #ffffff;
+    --surface-2: #eef4f2;
+    --text: #1a2523;
+    --muted: #566762;
+    --line: #dbe5e1;
+    --accent: #1e7d78;
+    --accent-ink: #135b57;
+    --code-bg: #eaf1ef;
+    /* viridis faz rampası — tema değişmez */
+    --f0: #440154; --f1: #414487; --f2: #2a788e;
+    --f3: #22a884; --f4: #7ad151; --f5: #fde725;
+    --badge-ink-dark: #1a2418;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1715;
+      --surface: #17211e;
+      --surface-2: #1d2926;
+      --text: #e5edea;
+      --muted: #97a8a2;
+      --line: #26332f;
+      --accent: #4cc0a9;
+      --accent-ink: #6fd3bf;
+      --code-bg: #1d2926;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1715;
+    --surface: #17211e;
+    --surface-2: #1d2926;
+    --text: #e5edea;
+    --muted: #97a8a2;
+    --line: #26332f;
+    --accent: #4cc0a9;
+    --accent-ink: #6fd3bf;
+    --code-bg: #1d2926;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
+    font-size: 1.05rem;
+    line-height: 1.65;
+    margin: 0;
+    padding: 0;
+  }
+  .wrap { max-width: 46rem; margin: 0 auto; padding: 2.5rem 1.25rem 5rem; }
+
+  h1, h2, h3 {
+    font-family: "Bricolage Grotesque", "Avenir Next", "Helvetica Neue", sans-serif;
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+  h1 { font-size: clamp(2rem, 6vw, 3rem); font-weight: 800; margin: 0.5rem 0 0.75rem; letter-spacing: -0.01em; }
+  h2 { font-size: 1.5rem; font-weight: 700; margin: 3rem 0 0.9rem; }
+  h3 { font-size: 1.12rem; font-weight: 650; margin: 1.6rem 0 0.5rem; }
+  p { margin: 0.75rem 0; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:hover { color: var(--accent-ink); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+  code, .mono {
+    font-family: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.85em;
+    background: var(--code-bg);
+    border-radius: 4px;
+    padding: 0.08em 0.35em;
+  }
+  .kicker {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .lede { font-size: 1.15rem; color: var(--muted); margin-top: 0; }
+
+  .quote {
+    border-left: 3px solid var(--accent);
+    background: var(--surface);
+    padding: 0.9rem 1.1rem;
+    margin: 1.5rem 0;
+    border-radius: 0 8px 8px 0;
+    font-style: italic;
+    color: var(--muted);
+  }
+  .quote .who { display: block; font-style: normal; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; margin-top: 0.4rem; }
+
+  /* faz genel bakış şeridi */
+  .overview {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+    margin: 1.5rem 0 0.5rem;
+  }
+  .overview a.ph {
+    flex: 1 1 8.5rem;
+    display: block;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 0.7rem 0.8rem;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .overview a.ph:hover { border-color: var(--accent); }
+  .overview .dot { width: 0.85rem; height: 0.85rem; border-radius: 50%; display: inline-block; margin-bottom: 0.35rem; }
+  .overview .nm { display: block; font-family: "Bricolage Grotesque", sans-serif; font-weight: 650; font-size: 0.92rem; line-height: 1.25; }
+  .overview .dur { display: block; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); margin-top: 0.25rem; }
+
+  /* faz blokları */
+  .phase {
+    border-left: 4px solid var(--pc, var(--accent));
+    background: var(--surface);
+    border-radius: 0 12px 12px 0;
+    padding: 1.4rem 1.5rem 0.5rem;
+    margin: 2rem 0;
+  }
+  .phase .tag {
+    display: inline-block;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    padding: 0.18em 0.65em;
+    border-radius: 999px;
+    background: var(--pc, var(--accent));
+    color: #fff;
+    margin-bottom: 0.3rem;
+  }
+  .phase .tag.inkdark { color: var(--badge-ink-dark); }
+  .phase h2 { margin: 0.2rem 0 0.2rem; font-size: 1.35rem; }
+  .phase .dur { font-family: "IBM Plex Mono", monospace; font-size: 0.8rem; color: var(--muted); }
+  .goal { font-style: italic; color: var(--muted); }
+
+  ul.res { list-style: none; margin: 1rem 0 1.2rem; padding: 0; display: grid; gap: 0.65rem; }
+  ul.res li {
+    background: var(--surface-2);
+    border-radius: 8px;
+    padding: 0.65rem 0.85rem;
+  }
+  ul.res .meta {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  ul.res .top { display: flex; justify-content: space-between; gap: 0.75rem; align-items: baseline; flex-wrap: wrap; }
+  ul.res .desc { margin: 0.25rem 0 0; font-size: 0.94rem; color: var(--text); }
+  ul.res a { font-weight: 600; }
+
+  .deliv {
+    display: flex; gap: 0.6rem; align-items: baseline;
+    font-size: 0.95rem;
+    border-top: 1px dashed var(--line);
+    padding: 0.8rem 0 1rem;
+    margin-top: 0.4rem;
+  }
+  .deliv .lbl {
+    font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  /* tablolar */
+  .tblwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; margin: 1.2rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.92rem; background: var(--surface); }
+  th, td { text-align: left; padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  th {
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 650; font-size: 0.85rem;
+    background: var(--surface-2);
+  }
+  td.num, th.num { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; font-size: 0.84rem; white-space: nowrap; }
+
+  .callout {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1.1rem 1.3rem;
+    margin: 1.5rem 0;
+  }
+  .callout h3 { margin-top: 0.2rem; }
+  .callout.accent { border-color: var(--accent); }
+
+  ul.plain { padding-left: 1.2rem; margin: 0.6rem 0; }
+  ul.plain li { margin: 0.45rem 0; }
+  ol.steps { padding-left: 1.3rem; margin: 0.6rem 0; }
+  ol.steps li { margin: 0.55rem 0; }
+  ol.steps li::marker { font-family: "IBM Plex Mono", monospace; font-weight: 600; color: var(--accent); }
+
+  .foot { color: var(--muted); font-size: 0.88rem; border-top: 1px solid var(--line); margin-top: 3.5rem; padding-top: 1.2rem; }
+  .small { font-size: 0.88rem; color: var(--muted); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <p class="kicker">kişisel öğrenme planı · ağustos 2026</p>
+  <h1>Sıfırdan LLM Yol Haritası</h1>
+  <p class="lede">Paul Graham'ın "17 yaşında olsam LLM'leri sıfırdan kurmayı öğrenir, elimdeki donanımla eğitebildiğim en güçlü modeli eğitirdim" tavsiyesinin, Türkçe korpuslarla çalışan bir araştırmacı için işletilebilir hâli.</p>
+
+  <div class="callout accent">
+    <h3>Neden 17 yaşındakinden öndesin</h3>
+    <ul class="plain">
+      <li>Python biliyorsun ve MPS üzerinde küçük model <em>zaten eğittin</em> — Faz 0'ın yarısı sende hazır.</li>
+      <li>Elinde gerçek korpuslar var (Alatlı külliyatı, OpenITI, DH derlemeleri). "Ne üzerinde eğiteceğim?" sorusu çoğu öğrencinin en büyük engeli; senin en güçlü kartın.</li>
+      <li>Akademik kimliğin ücretsiz büyük compute'un (TPU Research Cloud) kapısını açıyor ve sondaki proje yayına dönüşebiliyor.</li>
+    </ul>
+  </div>
+
+  <h2 id="ozet">Haritanın tamamı tek bakışta</h2>
+  <p>Altı faz; toplam <strong>~300–500 saat</strong> (haftada 8–10 saatle 9–15 ay). Zorunlu nakit maliyet: <span class="mono">$60–150</span> bulut GPU kirası — hepsi bu. Renkler ML'cilerin loss grafiklerinden tanıdığı viridis skalası: koyu mordan sarıya, sıfırdan modele.</p>
+
+  <div class="overview">
+    <a class="ph" href="#f0"><span class="dot" style="background:var(--f0)"></span><span class="nm">Zemin: Karpathy serisi</span><span class="dur">2–4 hafta</span></a>
+    <a class="ph" href="#f1"><span class="dot" style="background:var(--f1)"></span><span class="nm">Tokenizer + Türkçe</span><span class="dur">2–3 hafta</span></a>
+    <a class="ph" href="#f2"><span class="dot" style="background:var(--f2)"></span><span class="nm">İlk gerçek pretraining</span><span class="dur">4–6 hafta</span></a>
+    <a class="ph" href="#f3"><span class="dot" style="background:var(--f3)"></span><span class="nm">Derinlik: CS336</span><span class="dur">2–4 ay</span></a>
+    <a class="ph" href="#f4"><span class="dot" style="background:var(--f4)"></span><span class="nm">Post-training + eval</span><span class="dur">1–2 ay</span></a>
+    <a class="ph" href="#f5"><span class="dot" style="background:var(--f5)"></span><span class="nm">Capstone: nanochat + Türkçe model</span><span class="dur">1–2 ay</span></a>
+  </div>
+
+  <!-- ============ ÇALIŞMA YÖNTEMİ ============ -->
+  <h2 id="yontem">Bu haritayı nasıl çalışacaksın</h2>
+  <p>Harita bir okuma listesi değil, atölye programı. Aşağıdaki döngü her kaynak için aynıdır; kaynaktan kaynağa değişen yalnızca ölçek.</p>
+
+  <div class="callout accent">
+    <h3>Seans döngüsü — her kaynakta aynı beş adım</h3>
+    <ol class="steps">
+      <li><strong>Bütünü gör:</strong> videoyu/bölümü az duraklatarak bir kez izle ya da oku. Bu geçişin amacı harita çıkarmak, ezberlemek değil.</li>
+      <li><strong>Kapalı kitap yeniden yaz:</strong> kodu asla kopyalama. Boş dosya aç, kendin yaz; takılınca kaynağa bak, baktığın parçayı sil, o satırdan yeniden yaz. "Anladım"ın tek geçerli tanımı budur: boş dosyadan türetebilmek. Okuyup "mantıklı" demek sayılmaz.</li>
+      <li><strong>Egzersizi koş:</strong> minbpe'nin <code>exercise.md</code>'si, CS336'nın test süitleri, kitap alıştırmaları. Testin yeşili, senin "anladım" hissinden daha güvenilir bir sinyaldir.</li>
+      <li><strong>Türkçe'ye bük:</strong> her konuyu kendi korpusunda mini bir deneye çevir (makemore'a Türkçe isimler, minbpe'ye kendi metinlerin). Kalıcılığı ve motivasyonu sağlayan adım budur.</li>
+      <li><strong>Beş satır defter:</strong> seans sonunda yaz: bugün ne yaptım · ne öğrendim · neyi anlamadım · yarın ilk iş ne. "Anlamadıklarım" satırı bir sonraki seansın gündemidir.</li>
+    </ol>
+  </div>
+
+  <h3>Haftalık ritim (8–10 saat)</h3>
+  <p>Haftada <strong>2 derin blok</strong> (2–3'er saat; video + kod, bölünmesiz) + <strong>1 hafif blok</strong> (1–2 saat; makale, defter tekrarı, küçük deneyler). Derin blokları sabit takvim saatine bağla — "boş vakitte çalışırım" planı iki haftada ölür. Hafta sonu tek büyük blok da aynı işi görür.</p>
+
+  <h3>Takip sistemi: Atölye Defteri + tek repo</h3>
+  <div class="callout accent">
+    <p style="margin-top:0"><strong><a href="defter.html">📓 LLM Atölye Defteri</a></strong> — bu haritanın canlı takip aracı, tamamen müstakil: veri depodaki <code>durum.json</code>'da yaşar, defter <code>python3 defter.py html</code> ile ondan üretilir. İşaretle/işaretleme yerine her madde <strong>beş basamaklı ustalık merdiveninde</strong> bir yere oturur: <span class="mono">0 başlamadım · 1 bütünü gördüm · 2 kapalı kitap yazdım · 3 egzersiz/test yeşil · 4 Türkçe büküm + defter</span> (okuma maddeleri: <span class="mono">okudum · özetledim</span>). Faz kapıları kendiliğinden hesaplanır: çekirdek maddelerin tümü ≥ 3 ve en az biri tavandaysa kapı geçilmiş sayılır. Seans günlüğü (yaptım / öğrendim / anlamadım / yarın) ve haftalık saat sayacı da defterin içinde; terminal tarafı için <code>python3 defter.py durum</code> aynı panoyu basar.</p>
+  </div>
+  <ul class="plain">
+    <li>Kod tarafı için tek bir git deposu aç (örn. <code>llm-atolyesi/</code>): faz başına bir klasör, her seans bir commit. Commit geçmişin ilerleme grafiğidir — ve defterdeki seviye iddialarının kanıtıdır: "kapalı kitap yazdım" diyorsan commit'ini gösterebilmelisin.</li>
+    <li>Haftada bir 15 dakikalık retro: defterin "bu hafta" sayacına bak, hangi kapıya yaklaştığını söyle, gelecek haftanın iki derin bloğunu takvime koy.</li>
+    <li>Momentum kuralı: her fazın <em>ilk günü</em> en küçük çalışan şeyi koştur (Faz 2'nin ilk günü mlx-gpt2'nin 10 dakikalık koşusu gibi). İki hafta boş geçtiyse planı değil giriş eşiğini küçült: çekirdek rotaya dön.</li>
+  </ul>
+
+  <h3>Takıldığında</h3>
+  <ul class="plain">
+    <li>20 dakika kendi başına uğraş; sonra <strong>kaynak değiştir</strong>: aynı konuyu video ↔ kitap ↔ kod üçgeninin başka köşesinden gör (attention'ı Karpathy'de anlamadıysan Raschka'nın bölümünden oku — harita bu yüzden her konuda birden fazla kaynak taşıyor).</li>
+    <li>Hâlâ takılıysan deftere yaz ve Claude oturumuna getir: satır satır birlikte gidilir, ilerleme hafızada tutulur; her dönüşte "neredeyim, ne takıldı" ile başlanır.</li>
+    <li>LLM'den yardım isterken tek kural: kod <em>yazdırma</em>, <em>açıklat</em> — sonra 2. adımdaki gibi kendin yaz. Yazdırırsan döngü kırılır; öğrenme sana değil modele işler.</li>
+  </ul>
+
+  <!-- ============ PYTHON ZEMİNİ ============ -->
+  <h2 id="zemin">Zemin kontrolü: nanoGPT'yi okutan Python/PyTorch</h2>
+  <p>Faz 0'a başlamadan (ya da paralelinde) bir öz-test: nanoGPT'nin <a href="https://github.com/karpathy/nanoGPT/blob/master/model.py">model.py</a>'ı ~300 satırdır ve aşağıdaki yapılardan örülüdür. Satırı görünce açıklayabiliyorsan zeminin hazır demektir; takıldığın satır hangi kategorideyse yalnızca o satırın kaynağına dön — hiçbirini baştan sona "bitirmen" gerekmiyor.</p>
+
+  <div class="tblwrap"><table>
+    <tr><th>Yapı</th><th>nanoGPT'de karşılığı</th><th>Boşluğu kapatan kaynak</th></tr>
+    <tr><td class="num">@dataclass</td><td><code>GPTConfig</code> — tüm hiperparametreler tek sınıfta</td><td rowspan="3"><a href="https://docs.python.org/3/tutorial/classes.html">Python Tutorial §9 Classes</a>; ayrıca micrograd videosu OOP'nin ML'de kullanılan kısmını zaten öğretiyor</td></tr>
+    <tr><td class="num">class + super()</td><td><code>class GPT(nn.Module)</code> — her katman bir sınıf, <code>super().__init__()</code> ritüeli</td></tr>
+    <tr><td class="num">__call__ sihri</td><td><code>model(x)</code> yazınca <code>forward()</code>'ın çağrılması (nn.Module'ün <code>__call__</code>'u)</td></tr>
+    <tr><td class="num">comprehension</td><td><code>nn.ModuleList([Block(config) for _ in range(n_layer)])</code></td><td><a href="https://docs.python.org/3/tutorial/datastructures.html">Python Tutorial §5</a></td></tr>
+    <tr><td class="num">şekil + broadcasting</td><td><code>att = q @ k.transpose(-2,-1)</code> — (B,T,C) cebirini kafada şekil şekil izleyebilmek</td><td><a href="https://numpy.org/doc/stable/user/basics.broadcasting.html">NumPy broadcasting</a> (1 sa) + <a href="https://github.com/srush/Tensor-Puzzles">Tensor Puzzles</a></td></tr>
+    <tr><td class="num">view / split / transpose</td><td><code>qkv.split(...)</code>, <code>view(B,T,nh,hs).transpose(1,2)</code> — çok başlı dikkat baştan sona bir şekil oyunudur</td><td>Tensor Puzzles — 21 bulmaca, tek satırlık çözümler, Colab'da; şekil akıcılığı için en iyi antrenman (4–8 sa)</td></tr>
+    <tr><td class="num">dilimleme</td><td><code>logits[:, -1, :]</code> — üretim döngüsünde son token'ın logit'leri</td><td>Tensor Puzzles</td></tr>
+    <tr><td class="num">decorator / context mgr</td><td><code>@torch.no_grad()</code> altında <code>generate()</code>; <code>with</code> blokları</td><td rowspan="3"><a href="https://docs.pytorch.org/tutorials/beginner/basics/intro.html">PyTorch "Learn the Basics"</a> — 7 modül: tensör → veri → model → autograd → eğitim döngüsü (3–5 sa)</td></tr>
+    <tr><td class="num">autograd üçlüsü</td><td><code>loss.backward()</code> → <code>optimizer.step()</code> → <code>zero_grad()</code> — eğitim döngüsünün kalbi</td></tr>
+    <tr><td class="num">cihaz yönetimi</td><td><code>.to(device)</code>; 'cuda' / 'mps' / 'cpu' seçim bloğu</td></tr>
+  </table></div>
+
+  <p class="small">Toplam yatırım en fazla 8–14 saattir ve Faz 0'ın içine gömülebilir: micrograd zaten autograd'ı, makemore zaten tensör pratiğini verir. Buradaki kaynaklar "takıldığın anda başvur" içindir. Öz-testi Faz 0'ın sonunda tekrarla: model.py'da açıklayamadığın satır kalmadıysa Faz 2'ye hazırsın.</p>
+
+  <!-- ============ FAZ 0 ============ -->
+  <div class="phase" id="f0" style="--pc: var(--f0)">
+    <span class="tag">FAZ 0</span>
+    <h2>Zemin: Karpathy'nin sıfırdan serisi</h2>
+    <p class="dur">2–4 hafta · ~25–35 saat · $0 · tamamı Mac'te çalışır</p>
+    <p class="goal">Amaç: bir GPT'nin her satırını türetebilecek hâle gelmek. Senin profilinde ilk 3 ders hızlandırılmış izlenir; 4–5 (gradyan/BatchNorm iç dünyası) ve 7–8 yavaş alınır.</p>
+    <ul class="res">
+      <li><div class="top"><a href="https://karpathy.ai/zero-to-hero.html">Neural Networks: Zero to Hero</a><span class="meta">8 ders · ~15 sa video</span></div>
+        <p class="desc">Hâlâ kanonik giriş (Ağu 2026 itibarıyla hiçbir şey yerini almadı): micrograd → makemore ×5 → "Let's build GPT" → tokenizer.</p></li>
+      <li><div class="top"><a href="https://github.com/karpathy/makemore">makemore ile Türkçe deney</a><span class="meta">+5–10 sa</span></div>
+        <p class="desc"><code>names.txt</code> yerine Türkçe isim/toponim listesi koy; karakter modeli ünlü uyumunu nasıl öğreniyor, gör. MPS'te sorunsuz.</p></li>
+      <li><div class="top"><a href="https://karpathy.github.io/2026/02/12/microgpt/">microgpt — bitirme sınavı</a><span class="meta">Şub 2026 · 3–8 sa</span></div>
+        <p class="desc">Yeni: ~200 satır saf Python'da (bağımlılıksız) tokenizer + autograd + transformer + Adam. Karpathy'nin "on yıllık sadeleştirme takıntısının zirvesi". Seriden sonra bunu kapalı kitap yeniden türetebiliyorsan Faz 0 bitti.</p></li>
+    </ul>
+    <div class="deliv"><span class="lbl">Kanıt</span><span>Kendi elinle yazılmış, çalışan bir mini-GPT + Türkçe isim üreten bir makemore varyantı.</span></div>
+  </div>
+
+  <!-- ============ FAZ 1 ============ -->
+  <div class="phase" id="f1" style="--pc: var(--f1)">
+    <span class="tag">FAZ 1</span>
+    <h2>Tokenizer: Türkçe için en yüksek kaldıraç</h2>
+    <p class="dur">2–3 hafta · ~20–30 saat · $0</p>
+    <p class="goal">Eklemeli morfoloji yüzünden Türkçe'nin LLM'lerde en çok hırpalandığı yer tokenizasyon. Bu faz hem zanaat hem potansiyel yayın konusu.</p>
+    <ul class="res">
+      <li><div class="top"><a href="https://github.com/karpathy/minbpe">"Let's build the GPT Tokenizer" + minbpe</a><span class="meta">2 sa video + 6–10 sa egzersiz</span></div>
+        <p class="desc"><code>exercise.md</code>'yi uçtan uca yap; sonra kendi korpusunda BPE eğit ve GPT-4 tokenizer'ıyla Türkçe "fertility" karşılaştır.</p></li>
+      <li><div class="top"><a href="https://huggingface.co/learn/llm-course/chapter6/1">HF LLM Course, Bölüm 6</a> + <a href="https://github.com/google/sentencepiece">SentencePiece</a><span class="meta">6–10 sa</span></div>
+        <p class="desc">Üretim tarafı: kendi korpusunda tokenizer eğitme; Türkçe'de BPE ve unigram karşılaştırması.</p></li>
+      <li><div class="top">Üç Türkçe tokenizer makalesi (sırayla)<span class="meta">~2 gün</span></div>
+        <p class="desc"><a href="https://arxiv.org/abs/2502.07057">%TR &amp; token saflığı metrikleri</a> → <a href="https://arxiv.org/abs/2508.14292">morfoloji-temelli hibrit tokenizer</a> → <a href="https://arxiv.org/abs/2602.06942">Altınok 2026: ölçekte optimal Türkçe subword stratejileri</a>. %TR hesabı için analizör: <a href="https://github.com/obulat/zeyrek">zeyrek</a> (pip; zemberek'in Python portu).</p></li>
+    </ul>
+    <div class="deliv"><span class="lbl">Kanıt</span><span>Kendi Türkçe korpusunda eğitilmiş bir tokenizer + %TR/fertility karşılaştırma tablosu (Kumru'nun "rakipler %38–98 daha fazla token harcıyor" iddiasını kendi verinde test et).</span></div>
+  </div>
+
+  <!-- ============ FAZ 2 ============ -->
+  <div class="phase" id="f2" style="--pc: var(--f2)">
+    <span class="tag">FAZ 2</span>
+    <h2>İlk gerçek pretraining koşuları</h2>
+    <p class="dur">4–6 hafta · ~50–70 saat · $0–15</p>
+    <p class="goal">Oyuncaktan gerçeğe köprü: Mac'te MLX ile ücretsiz koşular + tek seferlik ~$10'lık bulut GPT-2 reprodüksiyonu.</p>
+    <ul class="res">
+      <li><div class="top"><a href="https://www.manning.com/books/build-a-large-language-model-from-scratch">Raschka — Build a Large Language Model (From Scratch)</a><span class="meta">~$33 · 40–60 sa</span></div>
+        <p class="desc">Kanonik kitap; <a href="https://github.com/rasbt/LLMs-from-scratch">repo'su</a> (103k★) macOS CI'lı — senin makinen test ediliyor. Bonus defterler (Qwen3, MoE, KV-cache) kitabın kapsamadığı 2025–26 mimarilerini de veriyor.</p></li>
+      <li><div class="top">Mac'te MLX hattı: <a href="https://github.com/pranavjad/mlx-gpt2">mlx-gpt2</a> → <a href="https://github.com/N8python/mlx-pretrain">mlx-pretrain</a><span class="meta">$0 · 1 hafta sonu</span></div>
+        <p class="desc">10 dakikada karakter-GPT; sonra M-serisinde ~2 saatte 200M token üzerinde mini model — tokenizer eğitimi dahil, Türkçe korpusa yönlendirilebilir. (MPS'teki <code>non_blocking</code> sessiz-bozulma tuzağını yaşadın; Mac'te 2026'nın net cevabı MLX.)</p></li>
+      <li><div class="top"><a href="https://github.com/karpathy/build-nanogpt">"Let's reproduce GPT-2 (124M)" + build-nanogpt</a><span class="meta">4 sa video + ~$10 bulut</span></div>
+        <p class="desc">Mixed precision, torch.compile, flash attention, DDP — "gerçek koşu" disiplini. <a href="https://github.com/karpathy/llm.c/discussions/481">llm.c reprodüksiyonu</a>: 8×A100'de ~90 dk ≈ $10–20. İlk bulut GPU deneyimin bu olsun.</p></li>
+      <li><div class="top">Ölçekleme yasaları üçlemesi<span class="meta">~3 gün okuma</span></div>
+        <p class="desc"><a href="https://arxiv.org/abs/2001.08361">Kaplan 2020</a> → <a href="https://arxiv.org/abs/2203.15556">Chinchilla 2022</a> (düzeltme: parametre ve token eşit ölçeklenir) → <a href="https://arxiv.org/abs/2305.16264">Muennighoff 2023, veri-kısıtlı rejim</a>. Üçüncüsü senin durumun: sınırlı Türkçe veriyle "~4 epoch'a kadar tekrar ≈ yeni veri" kuralı, capstone'un boyut kararını belirleyecek.</p></li>
+    </ul>
+    <div class="deliv"><span class="lbl">Kanıt</span><span>MLX'te kendi Türkçe korpusunda (örn. Alatlı külliyatı) eğitilmiş karakter/kelime LM + bulutta reprodüke edilmiş GPT-2 124M loss eğrisi.</span></div>
+  </div>
+
+  <!-- ============ FAZ 3 ============ -->
+  <div class="phase" id="f3" style="--pc: var(--f3)">
+    <span class="tag">FAZ 3</span>
+    <h2>Derinlik: Stanford CS336 omurgası</h2>
+    <p class="dur">2–4 ay (seçmeli yoğunluk) · çekirdek ~60–80 sa, tam program 150–250 sa · $0–300</p>
+    <p class="goal">"Language Modeling from Scratch" — PG tavsiyesinin üniversite dersi hâli. Spring 2026 videoları açık, 5 ödevin repoları ve test süitleri herkese açık; leaderboard'la kendini sınayabilirsin.</p>
+    <ul class="res">
+      <li><div class="top"><a href="https://cs336.stanford.edu/">CS336 (Spring 2026)</a> + <a href="https://github.com/stanford-cs336">ödev repoları</a><span class="meta">5 ödev · testli</span></div>
+        <p class="desc">Ödev 1: tokenizer+transformer+optimizer sıfırdan (Mac'te olur). Ödev 2: Triton/CUDA — NVIDIA ister, bulut kirası $50–300. Ödev 3: ölçekleme yasaları. Ödev 4: Common Crawl'dan veri küratörlüğü — <em>senin işinle en örtüşen ödev</em>. Ödev 5: alignment+RL.</p></li>
+      <li><div class="top">Veri hattı zanaatı: <a href="https://github.com/huggingface/datatrove">datatrove</a> + <a href="https://arxiv.org/abs/2406.17557">FineWeb raporu</a><span class="meta">~1 hafta</span></div>
+        <p class="desc">FineWeb'i inşa eden kütüphane ve yöntem makalesi (MinHash dedup, kalite filtreleri). DH korpus disiplinin buraya doğrudan taşınıyor; Türkçe slice'ını bununla kuracaksın.</p></li>
+      <li><div class="top">Paralel okuma rafı<span class="meta">sürekli</span></div>
+        <p class="desc"><a href="https://huggingfacetb-smol-training-playbook.hf.space/">Smol Training Playbook</a> (SmolLM3'ün dürüst hikâyesi: ablasyonlar ana koşudan pahalı), <a href="https://allenai.org/blog/olmo3">OLMo 3</a> (tam şeffaf: veri+kod+checkpoint+log), <a href="https://arxiv.org/abs/2407.21783">Llama 3 Herd</a>, <a href="https://arxiv.org/abs/2412.19437">DeepSeek-V3</a>. Hız cephesi: <a href="https://github.com/KellerJordan/modded-nanogpt">modded-nanogpt speedrun</a> (GPT-2 kalitesi 8×H100'de <strong>1.23 dakika</strong>, Tem 2026 rekoru) + <a href="https://www.tylerromero.com/posts/nanogpt-speedrun-worklog/">Romero'nun 2×4090 worklog'u</a>.</p></li>
+    </ul>
+    <div class="deliv"><span class="lbl">Kanıt</span><span>CS336 ödev 1 + 4'ün test süitleri yeşil; datatrove ile kurulmuş, dedup'lanmış 1–10B tokenlik Türkçe pretraining slice'ı.</span></div>
+  </div>
+
+  <!-- ============ FAZ 4 ============ -->
+  <div class="phase" id="f4" style="--pc: var(--f4)">
+    <span class="tag inkdark">FAZ 4</span>
+    <h2>Post-training ve değerlendirme</h2>
+    <p class="dur">1–2 ay · ~60–100 saat · $0–50</p>
+    <p class="goal">Base modelden chat modeline asgari güvenilir yol: SFT → DPO → (doğrulanabilir görev varsa) GRPO. 2026'da PPO devri kapandı; TRL v1.0 ile GRPO çağı.</p>
+    <ul class="res">
+      <li><div class="top">Sıfırdan versiyonlar önce: Raschka Bl.7 + DPO defteri, sonra <a href="https://www.manning.com/books/build-a-reasoning-model-from-scratch">Build a Reasoning Model (From Scratch)</a><span class="meta">Haz 2026'da çıktı · 25–40 sa</span></div>
+        <p class="desc">Yeni kitap: inference-time scaling, sıfırdan GRPO, distilasyon — laptop'ta koşuyor. <a href="https://github.com/rasbt/reasoning-from-scratch">Repo</a> ücretsiz.</p></li>
+      <li><div class="top">Sonra API katmanı: <a href="https://huggingface.co/docs/trl/index">TRL v1</a> + <a href="https://huggingface.co/learn/smol-course/unit0/1">smol-course</a> + Mac'te <a href="https://github.com/ml-explore/mlx-lm">mlx-lm LoRA</a><span class="meta">20–35 sa</span></div>
+        <p class="desc">mlx-lm ile 3–8B bir modeli kendi Türkçe verinde cihaz üstünde LoRA'la — sıfır bulut maliyeti, ollama alışkanlığının doğal uzantısı.</p></li>
+      <li><div class="top">Kavramsal omurga: <a href="https://rlhfbook.com/">RLHF Book</a> (Lambert) + <a href="https://rlhfbook.com/course">video kursu</a><span class="meta">ücretsiz · 20–30 sa</span></div>
+        <p class="desc">2026'nın güncel post-training ders kitabı; GRPO ardıllarını (DAPO, Dr.GRPO, GSPO) bağlama oturtur. 13 derslik video kursu Ağustos 2026'da tamamlandı.</p></li>
+      <li><div class="top">Eval disiplini: <a href="https://github.com/EleutherAI/lm-evaluation-harness">lm-eval-harness</a> + <a href="https://huggingface.co/spaces/OpenEvals/evaluation-guidebook">Evaluation Guidebook</a><span class="meta">10–18 sa</span></div>
+        <p class="desc">Her aşamada önce/sonra ölç. Özel YAML görevleriyle kendi Türkçe benchmark'larını tanımla. (Guidebook'un GitHub repo'su artık bakımda değil; güncel ev HF Space.)</p></li>
+    </ul>
+    <div class="deliv"><span class="lbl">Kanıt</span><span>SFT+DPO'dan geçmiş, harness'ta önce/sonra skorları raporlanmış bir chat modeli.</span></div>
+  </div>
+
+  <!-- ============ FAZ 5 ============ -->
+  <div class="phase" id="f5" style="--pc: var(--f5)">
+    <span class="tag inkdark">FAZ 5</span>
+    <h2>Capstone: nanochat + kendi Türkçe modelin</h2>
+    <p class="dur">1–2 ay · $50–150</p>
+    <p class="goal">PG'nin cümlesinin ikinci yarısı: "elindeki donanımla eğitebildiğin en güçlü model." İki adım: önce Karpathy'nin boru hattını aynen koş, sonra Türkçe'ye çevir.</p>
+    <ul class="res">
+      <li><div class="top"><a href="https://github.com/karpathy/nanochat">nanochat</a> — "$100'a en iyi ChatGPT"<span class="meta">d20: 561M param · 8×H100 ~1.5–4 sa ≈ $40–100</span></div>
+        <p class="desc">Tek repoda tam boru hattı: tokenizer eğitimi → pretraining → midtraining → SFT → RL → eval → web UI. nanoGPT'nin resmî halefi. Önce Mac'te küçük MPS/CPU konfigürasyonuyla ücretsiz öğren, sonra bir gün 8×H100 kirala (Lambda ~$32/sa düğüm). <a href="https://github.com/karpathy/nanochat/discussions/1">Discussion #1</a>: tek kiralık 5090 ile ~$4–11'e de eğitilmiş (10–30 saat).</p></li>
+      <li><div class="top">Türkçe model: veri<span class="meta">1–10B token slice</span></div>
+        <p class="desc">Güncel varsayılan <a href="https://huggingface.co/datasets/HuggingFaceFW/fineweb-2">FineWeb-2 tr</a> (~278B token; stream et, indirme). Kalite dilimi: <a href="https://huggingface.co/datasets/epfml/FineWeb2-HQ">FineWeb2-HQ</a>; tür çeşitliliği: <a href="https://huggingface.co/datasets/turkish-nlp-suite/BellaTurca">BellaTurca</a> (tezler+forum+web); konu filtreli: <a href="https://huggingface.co/datasets/altaidevorg/fineweb-2-turkish-categorized">fineweb-2-turkish-categorized</a> (reklam/yetişkin at, tarih/kültür ağırlıklandır).</p></li>
+      <li><div class="top">Türkçe model: yayınlanmış tarifler<span class="meta">boyut-eş şablonlar</span></div>
+        <p class="desc"><a href="https://arxiv.org/abs/2404.17336">cosmosGPT</a> (YTÜ; 355M/774M, MIT ağırlıklar) ve <a href="https://emrecanacikgoz.github.io/Bridging-the-Bosphorus/">Hamza serisi</a> (Koç; 124M→1.3B, <em>kodu açık</em>, 4 boyutlu ölçekleme merdiveni) — tam senin erişebileceğin ölçek. Güncel tavan: <a href="https://huggingface.co/vngrs-ai/Kumru-2B">Kumru-2B</a> (Apache-2.0; ollama'dan bugün çekip tokenizer'ını inceleyebilirsin). Değerlendirme: <a href="https://arxiv.org/abs/2508.16431">Cetvel</a> benchmark'ı.</p></li>
+      <li><div class="top">Yayın açısı (senin nişin)<span class="meta">DH × NLP</span></div>
+        <p class="desc">İki güçlü rota: (1) <a href="https://babylm.github.io/">BabyLM Challenge</a> — sabit küçük veri bütçesiyle örneklem-verimli pretraining, EMNLP 2026'da yeni <em>çok dilli</em> track; Mac ölçeğine göre tasarlanmış dürüst bir çerçeve. (2) Tarihsel/Osmanlı Türkçesi modeli — <a href="https://arxiv.org/abs/2501.04828">Özateş vd. 2025</a> hazır korpus (OTC) + eval altyapısı veriyor; alan-spesifik şablon olarak <a href="https://arxiv.org/abs/2601.16018">Mecellem</a> (hukuk) yapısal olarak birebir örnek.</p></li>
+    </ul>
+    <div class="deliv"><span class="lbl">Kanıt</span><span>Bir nanochat d20 koşusu (CORE skoru raporlu) + kendi tokenizer'ıyla eğitilmiş, Cetvel alt kümesinde değerlendirilmiş 100–350M parametrelik Türkçe model — GGUF'a çevrilip kendi ollama'nda servis edilmiş hâlde.</span></div>
+  </div>
+
+  <!-- ============ MALİYET ============ -->
+  <h2 id="maliyet">Donanım ve maliyet merdiveni</h2>
+  <p>Fiyatlar 23–24 Ağustos 2026 anlık görüntüsü; oynak — harcamadan önce <a href="https://getdeploying.com/gpus/nvidia-rtx-4090">GetDeploying</a>'den güncelle.</p>
+  <div class="tblwrap"><table>
+    <tr><th>Basamak</th><th>Ne eğitirsin</th><th class="num">Maliyet</th></tr>
+    <tr><td>Mac (MLX)</td><td>Karakter-GPT dakikalar içinde; ~2 saatte 200M token üstünde mini model; 3–8B LoRA fine-tune</td><td class="num">$0</td></tr>
+    <tr><td>Ücretsiz bulut</td><td>Kaggle ~30 GPU-sa/hafta (şeffaf kota; Colab'dan öngörülebilir) — TinyStories ölçeği</td><td class="num">$0</td></tr>
+    <tr><td>Kiralık 4090/5090</td><td>TinyStories 15M–110M (<a href="https://github.com/karpathy/llama2.c">llama2.c</a>); nanochat d20 bile mümkün (yavaş)</td><td class="num">$0.28–0.99/sa</td></tr>
+    <tr><td>8×A100 (90 dk)</td><td>GPT-2 124M reprodüksiyonu (llm.c) — HellaSwag'da orijinali geçer</td><td class="num">≈ $10–20</td></tr>
+    <tr><td>8×H100 (1.5–4 sa)</td><td>nanochat d20: uçtan uca ChatGPT klonu, GPT-2-large düzeyi</td><td class="num">≈ $40–100</td></tr>
+    <tr><td>8×H100 (~12 sa)</td><td>nanochat d26: GPT-2'yi geçen düzey</td><td class="num">≈ $300</td></tr>
+    <tr><td>Kalibrasyon sınırı</td><td>SmolLM3 (3B, 11T token): 384 H100 × 30 gün — endüstri ölçeği, hedef değil ölçek duygusu</td><td class="num">≈ $1.5M+</td></tr>
+  </table></div>
+
+  <div class="callout">
+    <h3>Akademisyene ücretsiz compute</h3>
+    <ul class="plain">
+      <li><a href="https://sites.research.google/trc/about/">TPU Research Cloud</a> — 1.000+ TPU'luk kümeye ücretsiz erişim; beklenti yayın/açık kod — <em>senin tekrarlanabilirlik pratiğinle birebir uyumlu, kabul şansı yüksek.</em> Küçük model sonuçların birikince başvur.</li>
+      <li>AWS Cloud Credit for Research — yıl boyu başvuru, ~3–4 ay değerlendirme; PyTorch kodun değişmeden koşar.</li>
+      <li>Ölü/kaçmış programlar: Microsoft AFMR bitti (halefi AARI/Azure Research Credits); Google ML Awards 2026 son tarihi geçti → 2027 döngüsünü takvime yaz.</li>
+    </ul>
+  </div>
+
+  <!-- ============ HİJYEN ============ -->
+  <h2 id="tuzaklar">Tuzaklar ve hijyen notları</h2>
+  <ul class="plain">
+    <li><strong>LLM101n'i bekleme.</strong> Repo Ağustos 2024'ten beri arşivli, kurs hiç çıkmadı; içeriği fiilen nanochat + microgpt + minbpe olarak parça parça yayımlandı.</li>
+    <li><strong>nanoGPT resmen "deprecated"</strong> (halefi nanochat) ama MPS bayrağı belgelenmiş tek klasik repo — Mac'te laboratuvar tezgâhı olarak hâlâ en iyisi.</li>
+    <li><strong>Mac'te PyTorch/MPS yerine MLX.</strong> tr-entropy'de yaşadığın <code>non_blocking</code> sessiz veri bozulması tuzağı hâlâ geçerli bir gerekçe; 2026'da Mac pretraining ekosistemi net biçimde MLX'e oturdu.</li>
+    <li><strong>2023 tarihli RLHF içeriği okuma.</strong> PPO deneysel statüye düştü; güncel omurga TRL v1 (SFT/DPO/GRPO) + RLHF Book.</li>
+    <li><strong>Servis katmanını atlama.</strong> Eğittiğin model GGUF'a çevrilip <a href="https://github.com/ggml-org/llama.cpp">llama.cpp</a>/ollama'da koşunca döngü kapanır; ölçekli servis için <a href="https://docs.vllm.ai/">vLLM</a> + PagedAttention makalesi.</li>
+    <li><strong>Yayınlamadan önce asgari güvenlik bloğu:</strong> <a href="https://arxiv.org/abs/2212.08073">Constitutional AI</a> + bir otomatik güvenlik evali (HarmBench). Türkçe benchmark'larda güvenlik kapsamı yok — bu da başlı başına açık bir niş.</li>
+    <li><strong>fast.ai Part 2 seçmeli:</strong> pedagojisi güzel ama 2023'te kaldı ve zirvesi diffusion; bu hedef için Zero to Hero + CS336 onu domine ediyor.</li>
+  </ul>
+
+  <div class="callout accent">
+    <h3>Vaktin dar mı? Çekirdek rota (~150–200 saat)</h3>
+    <p>Zero to Hero → minbpe + Türkçe tokenizer → Raschka kitabı → build-nanogpt (~$10 bulut koşusu) → nanochat d20 (~$50–100) → MLX'te 100M'lik Türkçe model. Fazların geri kalanı bu iskeletin üstüne istediğin sırayla eklenir.</p>
+  </div>
+
+  <p class="foot">Bu haritadaki her bağlantı 24 Ağustos 2026'da 7 paralel araştırma ajanıyla tek tek doğrulandı (186 web isteği); sonradan eklenen zemin-kontrol kaynakları da aynı gün ayrıca doğrulandı. Doğrulanamayan az sayıda kalem metinde ayrıca işaretli değilse birincil kaynağına bağlanmıştır; fiyatlar ve süreler anlık görüntüdür. Yaklaşık değerler: FineWeb-2 Türkçe token sayısı (~278B) ikincil kaynaktan; nanochat d26 fiyatı yaklaşıktır.</p>
+</div>
