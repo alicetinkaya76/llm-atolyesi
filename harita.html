@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sıfırdan LLM Yol Haritası</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
@@ -198,9 +203,11 @@
 
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
+</head>
+<body>
 
 <div class="wrap">
-  <p class="kicker">kişisel öğrenme planı · ağustos 2026</p>
+  <p class="kicker"><a href="index.html" style="color:inherit;text-decoration:none">← atölye</a> · <a href="defter.html" style="color:inherit;text-decoration:none">defter</a> · kişisel öğrenme planı · ağustos 2026</p>
   <h1>Sıfırdan LLM Yol Haritası</h1>
   <p class="lede">Paul Graham'ın "17 yaşında olsam LLM'leri sıfırdan kurmayı öğrenir, elimdeki donanımla eğitebildiğim en güçlü modeli eğitirdim" tavsiyesinin, Türkçe korpuslarla çalışan bir araştırmacı için işletilebilir hâli.</p>
 
@@ -262,6 +269,7 @@
 
   <!-- ============ PYTHON ZEMİNİ ============ -->
   <h2 id="zemin">Zemin kontrolü: nanoGPT'yi okutan Python/PyTorch</h2>
+  <p class="small"><a href="fazlar/zemin.html">Haftalık zemin planı →</a></p>
   <p>Faz 0'a başlamadan (ya da paralelinde) bir öz-test: nanoGPT'nin <a href="https://github.com/karpathy/nanoGPT/blob/master/model.py">model.py</a>'ı ~300 satırdır ve aşağıdaki yapılardan örülüdür. Satırı görünce açıklayabiliyorsan zeminin hazır demektir; takıldığın satır hangi kategorideyse yalnızca o satırın kaynağına dön — hiçbirini baştan sona "bitirmen" gerekmiyor.</p>
 
   <div class="tblwrap"><table>
@@ -284,7 +292,7 @@
   <div class="phase" id="f0" style="--pc: var(--f0)">
     <span class="tag">FAZ 0</span>
     <h2>Zemin: Karpathy'nin sıfırdan serisi</h2>
-    <p class="dur">2–4 hafta · ~25–35 saat · $0 · tamamı Mac'te çalışır</p>
+    <p class="dur">2–4 hafta · ~25–35 saat · $0 · tamamı Mac'te çalışır · <a href="fazlar/faz0.html">haftalık plan →</a></p>
     <p class="goal">Amaç: bir GPT'nin her satırını türetebilecek hâle gelmek. Senin profilinde ilk 3 ders hızlandırılmış izlenir; 4–5 (gradyan/BatchNorm iç dünyası) ve 7–8 yavaş alınır.</p>
     <ul class="res">
       <li><div class="top"><a href="https://karpathy.ai/zero-to-hero.html">Neural Networks: Zero to Hero</a><span class="meta">8 ders · ~15 sa video</span></div>
@@ -301,7 +309,7 @@
   <div class="phase" id="f1" style="--pc: var(--f1)">
     <span class="tag">FAZ 1</span>
     <h2>Tokenizer: Türkçe için en yüksek kaldıraç</h2>
-    <p class="dur">2–3 hafta · ~20–30 saat · $0</p>
+    <p class="dur">2–3 hafta · ~20–30 saat · $0 · <a href="fazlar/faz1.html">haftalık plan →</a></p>
     <p class="goal">Eklemeli morfoloji yüzünden Türkçe'nin LLM'lerde en çok hırpalandığı yer tokenizasyon. Bu faz hem zanaat hem potansiyel yayın konusu.</p>
     <ul class="res">
       <li><div class="top"><a href="https://github.com/karpathy/minbpe">"Let's build the GPT Tokenizer" + minbpe</a><span class="meta">2 sa video + 6–10 sa egzersiz</span></div>
@@ -318,7 +326,7 @@
   <div class="phase" id="f2" style="--pc: var(--f2)">
     <span class="tag">FAZ 2</span>
     <h2>İlk gerçek pretraining koşuları</h2>
-    <p class="dur">4–6 hafta · ~50–70 saat · $0–15</p>
+    <p class="dur">4–6 hafta · ~50–70 saat · $0–15 · <a href="fazlar/faz2.html">haftalık plan →</a></p>
     <p class="goal">Oyuncaktan gerçeğe köprü: Mac'te MLX ile ücretsiz koşular + tek seferlik ~$10'lık bulut GPT-2 reprodüksiyonu.</p>
     <ul class="res">
       <li><div class="top"><a href="https://www.manning.com/books/build-a-large-language-model-from-scratch">Raschka — Build a Large Language Model (From Scratch)</a><span class="meta">~$33 · 40–60 sa</span></div>
@@ -337,7 +345,7 @@
   <div class="phase" id="f3" style="--pc: var(--f3)">
     <span class="tag">FAZ 3</span>
     <h2>Derinlik: Stanford CS336 omurgası</h2>
-    <p class="dur">2–4 ay (seçmeli yoğunluk) · çekirdek ~60–80 sa, tam program 150–250 sa · $0–300</p>
+    <p class="dur">2–4 ay (seçmeli yoğunluk) · çekirdek ~60–80 sa, tam program 150–250 sa · $0–300 · <a href="fazlar/faz3.html">haftalık plan →</a></p>
     <p class="goal">"Language Modeling from Scratch" — PG tavsiyesinin üniversite dersi hâli. Spring 2026 videoları açık, 5 ödevin repoları ve test süitleri herkese açık; leaderboard'la kendini sınayabilirsin.</p>
     <ul class="res">
       <li><div class="top"><a href="https://cs336.stanford.edu/">CS336 (Spring 2026)</a> + <a href="https://github.com/stanford-cs336">ödev repoları</a><span class="meta">5 ödev · testli</span></div>
@@ -354,7 +362,7 @@
   <div class="phase" id="f4" style="--pc: var(--f4)">
     <span class="tag inkdark">FAZ 4</span>
     <h2>Post-training ve değerlendirme</h2>
-    <p class="dur">1–2 ay · ~60–100 saat · $0–50</p>
+    <p class="dur">1–2 ay · ~60–100 saat · $0–50 · <a href="fazlar/faz4.html">haftalık plan →</a></p>
     <p class="goal">Base modelden chat modeline asgari güvenilir yol: SFT → DPO → (doğrulanabilir görev varsa) GRPO. 2026'da PPO devri kapandı; TRL v1.0 ile GRPO çağı.</p>
     <ul class="res">
       <li><div class="top">Sıfırdan versiyonlar önce: Raschka Bl.7 + DPO defteri, sonra <a href="https://www.manning.com/books/build-a-reasoning-model-from-scratch">Build a Reasoning Model (From Scratch)</a><span class="meta">Haz 2026'da çıktı · 25–40 sa</span></div>
@@ -373,7 +381,7 @@
   <div class="phase" id="f5" style="--pc: var(--f5)">
     <span class="tag inkdark">FAZ 5</span>
     <h2>Capstone: nanochat + kendi Türkçe modelin</h2>
-    <p class="dur">1–2 ay · $50–150</p>
+    <p class="dur">1–2 ay · $50–150 · <a href="fazlar/faz5.html">haftalık plan →</a></p>
     <p class="goal">PG'nin cümlesinin ikinci yarısı: "elindeki donanımla eğitebildiğin en güçlü model." İki adım: önce Karpathy'nin boru hattını aynen koş, sonra Türkçe'ye çevir.</p>
     <ul class="res">
       <li><div class="top"><a href="https://github.com/karpathy/nanochat">nanochat</a> — "$100'a en iyi ChatGPT"<span class="meta">d20: 561M param · 8×H100 ~1.5–4 sa ≈ $40–100</span></div>
@@ -430,3 +438,5 @@
 
   <p class="foot">Bu haritadaki her bağlantı 24 Ağustos 2026'da 7 paralel araştırma ajanıyla tek tek doğrulandı (186 web isteği); sonradan eklenen zemin-kontrol kaynakları da aynı gün ayrıca doğrulandı. Doğrulanamayan az sayıda kalem metinde ayrıca işaretli değilse birincil kaynağına bağlanmıştır; fiyatlar ve süreler anlık görüntüdür. Yaklaşık değerler: FineWeb-2 Türkçe token sayısı (~278B) ikincil kaynaktan; nanochat d26 fiyatı yaklaşıktır.</p>
 </div>
+</body>
+</html>

@@ -1,19 +1,46 @@
 # LLM Atölyesi
 
 Paul Graham'ın "LLM'leri sıfırdan kurmayı öğren, elindeki donanımla
-eğitebildiğin en güçlü modeli eğit" tavsiyesinin müstakil atölyesi.
-Hiçbir bulut servisine bağımlı değildir: veri düz JSON, arayüz CLI +
-tek dosyalık HTML, hepsi bu depoda.
+eğitebildiğin en güçlü modeli eğit" tavsiyesinin müstakil atölyesi —
+aynı zamanda statik bir web sitesi. Hiçbir bulut servisine bağımlı
+değildir: veri düz JSON, arayüz CLI + statik HTML, hepsi bu depoda.
+
+## Site
+
+`index.html` kapak + canlı panodur (durum.json'dan hesaplar); `harita.html`
+yol haritası, `defter.html` etkileşimli defter, `fazlar/` haftalık faz
+planlarıdır. Yerelde önizleme:
+
+```bash
+node serve.mjs   # http://localhost:8933
+```
+
+### GitHub Pages'te yayınlama
+
+```bash
+gh repo create llm-atolyesi --public --source . --push
+```
+
+Sonra web arayüzünden: Settings → Pages → "Deploy from a branch" → `main` /
+`/ (root)`. Sonrası: her `git push` siteyi günceller.
+
+**Gizlilik notu:** ücretsiz planda Pages yalnız *public* depoda çalışır —
+`durum.json` ve seans günlüğün de görünür olur. Public yapacaksan buna
+bilerek karar ver; istemiyorsan depo private kalır (Pages için GitHub Pro /
+eğitim paketi gerekir) ya da site yerelde `node serve.mjs` ile yaşar.
 
 ## Dosyalar
 
 | Dosya | Ne |
 |---|---|
-| `harita.html` | Yol haritası (6 faz, kaynaklar, maliyet merdiveni) — tarayıcıda aç |
+| `index.html` | Kapak + canlı pano (fetch ile `durum.json`'dan hesaplar) |
+| `harita.html` | Yol haritası (6 faz, kaynaklar, maliyet merdiveni) |
+| `fazlar/*.html` | Haftalık faz planları (zemin + faz 0–5), kişiye özel notlarla |
 | `mufredat.json` | Müfredat: 42 madde, fazlar, ustalık basamakları (tek kaynak) |
 | `durum.json` | **İlerlemenin tek kaynağı** — git ile izlenir |
 | `defter.py` | CLI + `defter.html` üreticisi (yalnız stdlib, Python ≥3.9) |
-| `defter.html` | Üretilmiş etkileşimli defter (gitignore'da; `html` komutuyla tazelenir) |
+| `defter.html` | Etkileşimli defter; sunucudan açılınca en taze `durum.json`'u kendisi çeker |
+| `stil.css` / `serve.mjs` | Ortak stil / yerel önizleme sunucusu |
 | `zemin/ faz0..faz5/` | Faz çalışma klasörleri — kanıt kodların buraya, her seans bir commit |
 
 ## Günlük kullanım

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Faz 5 — Capstone</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../stil.css">
+</head>
+<body>
+<div class="wrap" style="--pc: var(--f5)">
+  <p class="kicker"><a href="../index.html">← atölye</a> · <a href="../harita.html">harita</a> · <a href="../defter.html">defter</a></p>
+  <p><span class="tag inkdark">FAZ 5</span></p>
+  <h1>Capstone: nanochat + kendi Türkçe modelin</h1>
+  <p class="lede">1–2 ay, $50–150. PG cümlesinin ikinci yarısı: "elindeki donanımla eğitebildiğin en güçlü model." İki bacak: önce <a href="https://github.com/karpathy/nanochat">nanochat</a> boru hattını aynen koş (tarif doğrulama), sonra aynı hattı Türkçe'ye çevir (senin katkın).</p>
+
+  <div class="callout kisiye">
+    <h3>Sana özel: iki yayın rotası, ikisi de senin sahanda</h3>
+    <p><strong>Rota A — BabyLM:</strong> <a href="https://babylm.github.io/">BabyLM Challenge</a>'ın çok dilli track'i (EMNLP 2026) sabit küçük veri bütçesiyle örneklem-verimli pretraining yarışması — Mac/MLX ölçeğine göre tasarlanmış dürüst bir çerçeve; Türkçe bir katkı doğal boşluk. <strong>Rota B — Osmanlı/tarihsel Türkçe:</strong> <a href="https://arxiv.org/abs/2501.04828">Özateş vd.</a> hazır korpus (OTC) + eval altyapısı veriyor; küçük bir tarihsel-Türkçe LM, DH kimliğinle birebir örtüşen, gerçekten yeni bir katkı olur. Yapısal şablon: <a href="https://arxiv.org/abs/2601.16018">Mecellem</a> (hukuk domain'i için aynısını yaptılar). Kararını f5f'te ver; ikisini de yapma — biri bitmiş, biri "gelecek iş".</p>
+  </div>
+
+  <div class="hafta">
+    <h3>Adım 1 — nanochat'i tanı <span class="sure">· 1–2 hafta · $0</span></h3>
+    <ul class="plain">
+      <li><span class="madde">f5a</span> Repo'yu oku (tokenizer → pretrain → midtrain → SFT → RL → eval → UI); <code>runcpu.sh</code>/MPS mini config'ini Mac'te koş. Amaç: 8×H100 gününde hiçbir adımın sürpriz olmaması. <a href="https://github.com/karpathy/nanochat/discussions/1">Discussion #1</a>'deki walkthrough'u yanında tut.</li>
+    </ul>
+  </div>
+
+  <div class="hafta">
+    <h3>Adım 2 — d20 speedrun günü <span class="sure">· 1 gün · ~$40–100</span></h3>
+    <ul class="plain">
+      <li><span class="madde">f5b</span> Lambda'dan 8×H100 düğümü kirala (~$32/sa; speedrun ~1.5–4 sa). Sabah aç, akşam kapat; CORE skorunu (hedef ≈ 0.22, GPT-2-large düzeyi) ve maliyet dökümünü raporla. Alternatif ucuz yol: tek kiralık 5090'da ~10–30 saat (~$4–11) — acele yoksa bu da meşru.</li>
+    </ul>
+  </div>
+
+  <div class="hafta">
+    <h3>Adım 3 — Türkçe veri + tokenizer <span class="sure">· 2–3 hafta</span></h3>
+    <ul class="plain">
+      <li><span class="madde">f5c</span> Faz 3'teki datatrove pipeline'ını büyüt: <a href="https://huggingface.co/datasets/HuggingFaceFW/fineweb-2">FineWeb-2 tr</a>'den (stream et; tamamı ~177GB+) kalite dilimi + <a href="https://huggingface.co/datasets/turkish-nlp-suite/BellaTurca">BellaTurca</a>'dan tür çeşitliliği (tezler, forum) + kendi korpusların. Hedef: 1–10B token, MinHash dedup'lu, karışım oranları raporlu. Konu filtresi gerekirse <a href="https://huggingface.co/datasets/altaidevorg/fineweb-2-turkish-categorized">kategorili türev</a>.</li>
+      <li>Tokenizer: Faz 1'in kazananı (vocab kararı Altınok 2026'ya dayalı). Boyut kararı: Chinchilla + veri-kısıtlı düzeltme — 1–10B token'la dürüst aralık 100–350M parametre; yayınlanmış boyut-eş şablonlar <a href="https://arxiv.org/abs/2404.17336">cosmosGPT</a> (355M) ve <a href="https://emrecanacikgoz.github.io/Bridging-the-Bosphorus/">Hamza</a> (124M→1.3B, kodu açık).</li>
+    </ul>
+  </div>
+
+  <div class="hafta">
+    <h3>Adım 4 — Eğit, ölç, servis et <span class="sure">· 2–4 hafta · $10–50</span></h3>
+    <ul class="plain">
+      <li><span class="madde">f5d</span> Eğitim: küçük konfig'i Mac/MLX'te prova et; asıl koşu kiralık tek A100/4090'da (124M ≈ birkaç gün 4090; ya da nanochat altyapısını Türkçe veriyle kullan). İki boyut eğitip (ör. 124M + 350M) kendi mini ölçekleme eğrini çizersen Hamza'yla karşılaştırma bedava.</li>
+      <li><span class="madde">f5e</span> Değerlendirme: <a href="https://arxiv.org/abs/2508.16431">Cetvel</a> alt kümesi + Faz 4'teki kendi Türkçe YAML görevlerin + Faz 1'in %TR/fertility tablosu. Servis: GGUF'a çevir → izole ollama'na (11435) yükle → "kendi modelinle sohbet" ekran görüntüsü. Model kartını dürüst yaz: neyi yapamıyor bölümü dahil (küçük modeller Cetvel'in kültürel QA'sında zayıf kalır — beklenen bu).</li>
+      <li>Yayınlamadan önce asgari güvenlik: <a href="https://arxiv.org/abs/2212.08073">Constitutional AI</a>'ı oku, bir otomatik güvenlik evali koş (HarmBench tarzı); Türkçe güvenlik benchmark'ı yok — bulguların bu boşluğun kendisi bile not değerinde.</li>
+    </ul>
+  </div>
+
+  <div class="hafta">
+    <h3>Adım 5 — Yayın + ücretsiz compute <span class="sure">· sürekli</span></h3>
+    <ul class="plain">
+      <li><span class="madde">f5f</span> Rota kararı (A/B) + taslak. Küçük sonuçlar birikince <a href="https://sites.research.google/trc/about/">TPU Research Cloud</a>'a başvur — yayın/açık kod beklentisi senin pratiğinle birebir; kabul edilirse >1B parametre Türkçe koşusu $0'a mümkün. Takvime: Google ML Awards 2027 döngüsü.</li>
+    </ul>
+  </div>
+
+  <div class="deliv"><span class="lbl">Kapı</span><span>f5a–f5e ≥ 3; en az biri tavanda (aday: f5d ya da f5e L4). Kanıt: <code>faz5/</code>'te koşu raporları, veri karışım dökümü, model kartı, eval tabloları — hepsi koddan üretilmiş, commit'li. Atölye burada biter; yayın süreci kendi projesine ayrılır.</span></div>
+
+  <p class="foot"><a href="faz4.html">← Faz 4</a> · <a href="../index.html">Atölye ana sayfası</a></p>
+</div>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Faz 1 — Tokenizer ve Türkçe</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../stil.css">
+</head>
+<body>
+<div class="wrap" style="--pc: var(--f1)">
+  <p class="kicker"><a href="../index.html">← atölye</a> · <a href="../harita.html">harita</a> · <a href="../defter.html">defter</a></p>
+  <p><span class="tag">FAZ 1</span></p>
+  <h1>Tokenizer: Türkçe için en yüksek kaldıraç</h1>
+  <p class="lede">2–3 hafta, ~20–30 saat, $0. Eklemeli morfoloji yüzünden Türkçe'nin LLM'lerde en çok hırpalandığı yer tokenizasyon: İngilizce-merkezli BPE, Türkçe metni %38–98 daha fazla token'a bölüyor (Kumru'nun ölçümü). Bu faz hem zanaat hem <strong>yayınlanabilir mikro-sonuç</strong> adayı.</p>
+
+  <div class="callout kisiye">
+    <h3>Sana özel: korpusların bu fazın laboratuvarı</h3>
+    <p>Fertility deneylerini oyuncak veriyle değil kendi malzemenle yap: <strong>Alatlı külliyatı</strong> (9 cilt, 5.847 sayfa OCR+JSON — modern edebi Türkçe) ve Özateş vd.'nin <a href="https://arxiv.org/abs/2501.04828">OTC transliterasyonlu Osmanlı korpusu</a> (tarihsel katman). Aynı metni GPT-4 tokenizer'ı, Kumru'nun Türkçe BPE'si ve kendi eğittiğin tokenizer'la böl; token/kelime oranlarını tablola. Modern-tarihsel farkı tek başına ilginç bir DH bulgusu.</p>
+  </div>
+
+  <div class="hafta">
+    <h3>Hafta 1 — BPE'yi sıfırdan kur <span class="sure">· ~8–10 sa</span></h3>
+    <ul class="plain">
+      <li><span class="madde">f1a</span> <a href="https://www.youtube.com/watch?v=zduSFxRajkE">"Let's build the GPT Tokenizer"</a> (2s13) + <a href="https://github.com/karpathy/minbpe">minbpe</a> <code>exercise.md</code>: BasicTokenizer → RegexTokenizer → GPT-4 reprodüksiyonu merdivenini uçtan uca çık. Testler yeşilse L3.</li>
+    </ul>
+  </div>
+
+  <div class="hafta">
+    <h3>Hafta 2 — Türkçe deney <span class="sure">· ~8–10 sa</span></h3>
+    <ul class="plain">
+      <li><span class="madde">f1b</span> Kendi BPE'ni Alatlı korpusunda eğit (8k / 16k / 32k vocab, üçünü de). Fertility tablosu: token/kelime oranı — kendi tokenizer'ın vs <code>tiktoken</code> (GPT-4) vs <a href="https://huggingface.co/vngrs-ai/Kumru-2B">Kumru-2B</a>'nin tokenizer'ı (HF'den yüklenir). Sayılar koddan üretilsin, tabloya elle yazma.</li>
+      <li><span class="madde">f1c</span> <a href="https://huggingface.co/learn/llm-course/chapter6/1">HF Tokenizers (ch6)</a> + <a href="https://github.com/google/sentencepiece">SentencePiece</a>: aynı korpusta BPE vs <strong>unigram</strong> karşılaştır — morfolojik dillerde unigram genelde daha temiz ek sınırları verir; senin verinde öyle mi?</li>
+    </ul>
+  </div>
+
+  <div class="hafta">
+    <h3>Hafta 3 — Literatür + ölçüm <span class="sure">· ~6–8 sa</span></h3>
+    <ul class="plain">
+      <li><span class="madde">f1d</span> <a href="https://arxiv.org/abs/2502.07057">%TR ve token saflığı</a>: metrikleri öğren.</li>
+      <li><span class="madde">f1g</span> <a href="https://github.com/obulat/zeyrek">zeyrek</a> ile kendi tokenizer'larının %TR'sini hesapla (token'ların ne kadarı geçerli Türkçe kelime). Fertility tablosuna sütun olarak ekle.</li>
+      <li><span class="madde">f1e</span> <a href="https://arxiv.org/abs/2508.14292">Morfoloji-temelli hibrit tokenizer</a> (kök+ek mimarisi) — okuma; ileri hedef olarak not al.</li>
+      <li><span class="madde">f1f</span> <a href="https://arxiv.org/abs/2602.06942">Altınok 2026</a>: vocab boyutu × tokenizer ailesi taraması — capstone'daki vocab kararını bu makaleyle ver; deftere "benim seçimim ve gerekçesi" notu düş.</li>
+    </ul>
+  </div>
+
+  <h2>Beklenen çıktı: tek tablo</h2>
+  <div class="tblwrap"><table>
+    <tr><th>Tokenizer</th><th class="num">vocab</th><th class="num">token/kelime (Alatlı)</th><th class="num">token/kelime (OTC)</th><th class="num">%TR</th></tr>
+    <tr><td>tiktoken (GPT-4)</td><td class="num">100k</td><td class="num">?</td><td class="num">?</td><td class="num">?</td></tr>
+    <tr><td>Kumru-2B BPE</td><td class="num">50k</td><td class="num">?</td><td class="num">?</td><td class="num">?</td></tr>
+    <tr><td>Kendi BPE'n</td><td class="num">8/16/32k</td><td class="num">?</td><td class="num">?</td><td class="num">?</td></tr>
+    <tr><td>Kendi unigram'ın</td><td class="num">8/16/32k</td><td class="num">?</td><td class="num">?</td><td class="num">?</td></tr>
+  </table></div>
+  <p class="small">Soru işaretlerini kod dolduracak (<code>faz1/fertility.py</code>). Bu tablo hem Faz 5'in tokenizer kararı hem de olası bir kısa bildiri/blog yazısının çekirdeği.</p>
+
+  <div class="deliv"><span class="lbl">Kapı</span><span>f1a, f1b ≥ 3; f1d, f1f ≥ 2; en az biri tavanda (doğal aday: f1b L4 — tablo + defter analizi). Kanıt: <code>faz1/</code>'de tokenizer kodu + tabloyu üreten betik + tablo, commit'li.</span></div>
+
+  <p class="foot"><a href="faz0.html">← Faz 0</a> · Sonraki: <a href="faz2.html">Faz 2 — İlk gerçek pretraining</a></p>
+</div>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Faz 4 — Post-training ve Eval</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../stil.css">
+</head>
+<body>
+<div class="wrap" style="--pc: var(--f4)">
+  <p class="kicker"><a href="../index.html">← atölye</a> · <a href="../harita.html">harita</a> · <a href="../defter.html">defter</a></p>
+  <p><span class="tag inkdark">FAZ 4</span></p>
+  <h1>Post-training ve değerlendirme</h1>
+  <p class="lede">1–2 ay, ~60–100 saat, $0–50. Base modelden chat modeline asgari güvenilir yol: <strong>SFT → DPO → (doğrulanabilir görev varsa) GRPO</strong>. Kural değişmedi: her tekniği önce sıfırdan yaz, sonra üretim API'siyle (TRL) tekrarla. 2023 tarihli PPO içeriği okuma — devir GRPO devri, TRL v1'de PPO deneysel rafa kalktı.</p>
+
+  <div class="callout kisiye">
+    <h3>Sana özel: ollama alışkanlığın burada işe koşuluyor</h3>
+    <p>mlx-lm ile 3–8B bir modeli <em>kendi Mac'inde</em> LoRA'layacaksın — veri olarak kendi alanından bir talimat seti kur (ör. Ghazâlî RAG'inin soru-cevap çiftlerinden ya da TİMAV notlarından türetilmiş 500–1000 örnek). Çıktıyı GGUF'a çevirip izole ollama'na (11435) yükle; "kendi verimle hizaladığım ilk model" ollama listende dursun. Değerlendirme refleksin için de avantajlısın: κ-kapısı disiplinin LLM-as-judge tuzaklarının panzehiri.</p>
+  </div>
+
+  <div class="hafta">
+    <h3>Hafta 1–2 — SFT + DPO sıfırdan <span class="sure">· ~15 sa · Mac yeter</span></h3>
+    <ul class="plain">
+      <li><span class="madde">f4a</span> <a href="https://github.com/rasbt/LLMs-from-scratch">Raschka bl. 7</a> (talimat fine-tune, düz PyTorch) + bonus <strong>DPO from scratch</strong> defteri. Chat template kavramını burada mühürle — kendi kendine öğrenenlerin en sık atladığı parça.</li>
+      <li><span class="madde">f4d</span> Paralel okuma: <a href="https://rlhfbook.com/">RLHF Book</a> (Lambert) çekirdek bölümler: SFT, reward model, DPO, policy gradient/GRPO. <a href="https://rlhfbook.com/course">Video kursu</a> (13 ders, Ağu 2026'da tamamlandı) hafif bloklara.</li>
+    </ul>
+  </div>
+
+  <div class="hafta">
+    <h3>Hafta 3–4 — Üretim katmanı: TRL + mlx-lm <span class="sure">· ~15 sa</span></h3>
+    <ul class="plain">
+      <li><span class="madde">f4b</span> <a href="https://huggingface.co/docs/trl/index">TRL v1</a>: bir SFT + bir DPO koşusu (küçük model, küçük veri — amaç API'yi tanımak). <a href="https://huggingface.co/learn/smol-course/unit0/1">smol-course</a>'u rehber olarak kullan.</li>
+      <li><span class="madde">f4c</span> <a href="https://github.com/ml-explore/mlx-lm">mlx-lm LoRA</a>: kendi Türkçe talimat setinle cihazda fine-tune → GGUF → ollama. Sıfır bulut maliyeti.</li>
+    </ul>
+  </div>
+
+  <div class="hafta">
+    <h3>Hafta 5–6 — Eval disiplini + GRPO <span class="sure">· ~15–20 sa</span></h3>
+    <ul class="plain">
+      <li><span class="madde">f4f</span> <a href="https://github.com/EleutherAI/lm-evaluation-harness">lm-eval-harness</a>: her aşamada önce/sonra ölçüm rutinini kur. <strong>Özel YAML göreviyle kendi Türkçe benchmark'ını tanımla</strong> (ör. Alatlı korpusundan cloze soruları). <a href="https://huggingface.co/spaces/OpenEvals/evaluation-guidebook">Evaluation Guidebook</a>: "iyileşti" derken kendini nasıl kandırmazsın. Çok dilli görevler için <a href="https://github.com/huggingface/lighteval">lighteval</a> yedek.</li>
+      <li><span class="madde">f4e</span> <a href="https://www.manning.com/books/build-a-reasoning-model-from-scratch">Build a Reasoning Model (From Scratch)</a> (Haz 2026'da çıktı) bl. 5–7: sıfırdan GRPO. Ardından API karşılığı: <a href="https://huggingface.co/learn/llm-course/chapter12/1">HF course ch12</a> ile TRL GRPOTrainer. Doğrulanabilir görevin yoksa (matematik/kod gibi) GRPO'yu erteleyebilirsin — SFT+DPO capstone için yeterli.</li>
+    </ul>
+  </div>
+
+  <h2>Asgari güvenilir yol (özet reçete)</h2>
+  <ol class="steps">
+    <li>Base modelin tokenizer'ını tanı (Faz 1 kasların).</li>
+    <li>Chat template + SFT (LoRA) — önce Raschka bl.7, sonra TRL/mlx-lm.</li>
+    <li>Tek tercih adımı: DPO (from-scratch defter → TRL).</li>
+    <li>Yalnızca doğrulanabilir görev varsa: GRPO.</li>
+    <li>Her adımda önce/sonra: lm-eval-harness + kendi Türkçe YAML görevin.</li>
+  </ol>
+
+  <div class="deliv"><span class="lbl">Kapı</span><span>f4a, f4b, f4f ≥ 3; f4d ≥ 2; en az biri tavanda (aday: f4c L4 — kendi verinle LoRA'lanıp ollama'da servis edilen model). Kanıt: <code>faz4/</code>'te eğitim defterleri + önce/sonra eval tabloları, commit'li.</span></div>
+
+  <p class="foot"><a href="faz3.html">← Faz 3</a> · Sonraki: <a href="faz5.html">Faz 5 — Capstone</a></p>
+</div>
+</body>
+</html>

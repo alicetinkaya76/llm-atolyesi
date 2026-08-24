@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zemin — Python/PyTorch</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../stil.css">
+</head>
+<body>
+<div class="wrap" style="--pc: var(--fz)">
+  <p class="kicker"><a href="../index.html">← atölye</a> · <a href="../harita.html">harita</a> · <a href="../defter.html">defter</a></p>
+  <p><span class="tag">ZEMİN</span></p>
+  <h1>Python/PyTorch zemini</h1>
+  <p class="lede">1–2 hafta, Faz 0 ile paralel yürüyebilir. Amaç genel Python öğrenmek değil: nanoGPT'nin <a href="https://github.com/karpathy/nanoGPT/blob/master/model.py">model.py</a>'ındaki ~300 satırın her birini açıklayabilmek. Ölçüt net: açıklayamadığın satır kalmayınca zemin biter.</p>
+
+  <div class="callout kisiye">
+    <h3>Sana özel</h3>
+    <p>MPS'te model zaten eğittin (tr-entropy) — autograd ve eğitim döngüsü sana yabancı değil. Senin gerçek boşluğun büyük ihtimalle <strong>şekil cebiri</strong>: <code>view/transpose/split</code> zincirlerini kafada izlemek. Bu yüzden buradaki ağırlık Tensor Puzzles'ta. Bir de geçmişteki <code>non_blocking</code> sessiz-bozulma vakan var: "Learn the Basics"in autograd ve cihaz bölümlerini o gözle oku — bu sefer hatayı <em>açıklayabilen</em> kişi ol.</p>
+  </div>
+
+  <div class="hafta">
+    <h3>Hafta 1 <span class="sure">· ~5–7 sa</span></h3>
+    <ul class="plain">
+      <li><span class="madde">z1</span> <a href="https://github.com/srush/Tensor-Puzzles">Tensor Puzzles</a> 1–11: Colab'da aç; günde 3–4 bulmaca. Kural: çözüm tek satır, yerleşik fonksiyon yok. Takıldığında videoyu değil, broadcasting sayfasını aç.</li>
+      <li><span class="madde">z2</span> <a href="https://docs.pytorch.org/tutorials/beginner/basics/intro.html">PyTorch "Learn the Basics"</a> modül 1–4 (Tensors, Data, Transforms, Build Model). Kodu Colab'da değil kendi Mac'inde koştur; <code>device='mps'</code> ile.</li>
+      <li><span class="madde">z3</span> <a href="https://numpy.org/doc/stable/user/basics.broadcasting.html">NumPy broadcasting</a> sayfası — 1 saat, bir kez, dikkatle. Sonrası hep pratik.</li>
+    </ul>
+  </div>
+
+  <div class="hafta">
+    <h3>Hafta 2 <span class="sure">· ~5–7 sa</span></h3>
+    <ul class="plain">
+      <li><span class="madde">z1</span> Tensor Puzzles 12–21 (zorlar: <code>bucketize</code>, <code>scatter_add</code>). 21/21 → defterde z1'i 3'e çek.</li>
+      <li><span class="madde">z2</span> "Learn the Basics" modül 5–7 (Autograd, Optimization, Save/Load). Autograd modülünde dur: <code>requires_grad</code>, <code>backward()</code>, <code>no_grad()</code> üçgenini kendi cümlelerinle deftere yaz.</li>
+      <li><span class="madde">z4</span> <strong>Öz-test:</strong> nanoGPT <code>model.py</code>'ı aç, satır satır in. Açıklayamadığın her satırı deftere yaz; kategorisine göre kaynağa dön (şekil → Puzzles; autograd → LtB; Python sınıf mekaniği → <a href="https://docs.python.org/3/tutorial/classes.html">Tutorial §9</a>). Faz 0'ın sonunda testi tekrarla.</li>
+    </ul>
+  </div>
+
+  <h2>Öz-test kontrol soruları</h2>
+  <ul class="plain">
+    <li><code>@dataclass GPTConfig</code> ne kazandırıyor; neden düz sözlük değil?</li>
+    <li><code>model(x)</code> yazınca <code>forward()</code> nasıl çağrılıyor? (<code>nn.Module.__call__</code> zinciri)</li>
+    <li><code>att = q @ k.transpose(-2,-1)</code> satırında her tensörün şekli ne? (B, T, C'den başlayarak yaz)</li>
+    <li><code>qkv.split(...)</code> + <code>view(B,T,nh,hs).transpose(1,2)</code> neden bu sırayla?</li>
+    <li><code>logits[:, -1, :]</code> üretim döngüsünde neyi seçiyor?</li>
+    <li><code>@torch.no_grad()</code> altında <code>generate()</code> olmasa ne olurdu?</li>
+    <li><code>loss.backward()</code> → <code>optimizer.step()</code> → <code>zero_grad()</code>: sırayı bozarsan ne bozulur?</li>
+  </ul>
+
+  <div class="deliv"><span class="lbl">Kapı</span><span>z1 = 3/3, z2 ≥ 1 (2 önerilir), z4 = 2 (öz-testte açıklanamayan satır kalmadı). Kanıt: Puzzles çözümlerin + öz-test notun <code>zemin/</code> klasöründe, commit'li.</span></div>
+
+  <p class="foot"><a href="../index.html">← Atölye</a> · Sonraki: <a href="faz0.html">Faz 0 — Karpathy serisi</a></p>
+</div>
+</body>
+</html>
