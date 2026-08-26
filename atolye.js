@@ -156,6 +156,19 @@
      için ölçtüğü "kazanımın yarısı ~6.5 ayda kayboluyor" bulgusuyla
      bağımsız olarak örtüşüyor.
 
+     KALİBRASYONUN AÇIK GERİLİMİ (bilerek ortada bırakıldı). İki bulgu ters
+     yönde çekiyor: (a) Arthur vd. 1998 meta-analizi BİLİŞSEL görevlerin
+     bedensel olanlardan daha hızlı çürüdüğünü söylüyor (d -1.18 vs -0.76) ve
+     doğruluk ölçütü hız ölçütünden çok daha kötü (-1.02 vs -0.33) — boş
+     dosyadan micrograd yazmak tam da bilişsel + doğruluk + açık-döngü, yani
+     her ölçütte hızlı-çürüme tarafında. (b) Tatel & Ackerman'ın karmaşıklık
+     eşleyicisi ise ters yönde: görev karmaşıklaştıkça çürüme AZALIYOR
+     (bileşen karmaşıklığı düşükte -0.61, yüksekte -0.20) — micrograd yalıtık
+     bir olgu değil, yüksek karmaşıklıkta bir bileşke. Kullandığımız 6.5 ay
+     "doğruluk" rakamıdır, yani (a)'nın hızlı ucundan alınmıştır ve (b) onu
+     bir miktar geri çeker. Sayı bu iki gücün arasında duruyor; daha ince bir
+     kalibrasyon iddiası veri olmadan uydurma olurdu.
+
      EŞİK SEÇİMİ — bilinçli olarak GEVŞEK. Anki yığını üzerine yapılan
      ankette (89 tıp öğrencisi) kullanıcıların %82'si aracı bunaltıcı,
      %68'i kaygı verici buluyor ve %75'i eski tekrarları hiç yetiştiremiyor.
@@ -566,6 +579,33 @@
       return todayLocal(d);
     }
 
+    /* Kapı eşikleri: her fazın kapısı, çekirdek yüzdesinin HANGİ değerinde
+       geçilmiş olur? Fazlar sırayla tamamlandığı varsayımıyla kümülatif.
+       Bu sayılar elle yazılmaz, müfredattan türetilir — grafiğin y ızgarası
+       jenerik %25/50/75 değil, bu eşiklerdir.
+       Buradan çıkan gerçek: son kapı %100'de DEĞİL. Kalan pay merdivenin
+       4. basamağıdır ("Türkçe büküm + defter"), hiçbir kapının şartı değil.
+       Gizlenecek değil gösterilecek bir olgu: tüm kapıları geçmek ≠ %100. */
+    function kapiEsikleri() {
+      var core = items.filter(function (i) { return i.core; });
+      if (!core.length) return [];
+      var toplam = 0, out = [];
+      (phases || []).forEach(function (p) {
+        var fazCore = core.filter(function (i) { return i.p === p.id; });
+        if (!fazCore.length) return;
+        /* kapı şartı: hepsi eşikte + en az biri tavanda */
+        var pay = 0, enIyi = 0;
+        fazCore.forEach(function (i) {
+          pay += passLevel(i) / itemMax(i);
+          enIyi = Math.max(enIyi, 1 - passLevel(i) / itemMax(i));
+        });
+        pay += enIyi;   /* biri tavana çıkarsa eklenecek fark */
+        toplam += pay;
+        out.push({ id: p.id, tag: p.tag, pct: 100 * toplam / core.length });
+      });
+      return out;
+    }
+
     /* Bir fazın kapısına kalan çekirdek yüzdesi (genel yüzde biriminde) */
     function kapiyaKalanYuzde(pid) {
       var core = items.filter(function (i) { return i.core; });
@@ -606,6 +646,7 @@
       byWeekday: byWeekday,
       ilerlemeSerisi: ilerlemeSerisi,
       kapiGecmisi: kapiGecmisi,
+      kapiEsikleri: kapiEsikleri,
       tazelik: tazelik,
       tazelemeKuyrugu: tazelemeKuyrugu,
       kestirim: kestirim,

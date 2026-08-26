@@ -100,100 +100,154 @@
     return parca.join('');
   }
 
-  /* ---- YÖRÜNGE ----
-     Tek grafikte üç şey: gerçekleşen ilerleme (olay günlüğünden yeniden
-     oynatılmış), geçilmiş kapılar (kilometre taşı), ve kestirim konisi
-     (P50–P95 arası belirsizlik bandı). Kestirim yoksa koni ÇİZİLMEZ —
-     boş bir gelecek uydurmaktansa yalnız geçmişi göstermek dürüsttür. */
+  /* ---- KAPI GRAFİĞİ ----
+     Tek ana görsel, üç epistemik katman ve her birine AYRI görsel gramer:
+       · KAPI IZGARASI — müfredattan türetilmiş eşikler (jenerik %25/50/75
+         değil). Son kapı %100'de değil: kalan pay merdivenin 4. basamağı,
+         hiçbir kapının şartı değil. Bu gizlenmiyor, tavan bandı olarak
+         gösteriliyor.
+       · GERÇEKLEŞEN — olay günlüğünün yeniden oynatımı. Ölçülmüş veri.
+       · KESTİRİM — simülasyon; sağa doğru açılan ışınlar.
+     GRAMER VERİ SERTLEŞTİKÇE SERTLEŞİYOR: 5 gözlemin altında çizgi bile
+     çizilmez (nokta), P85 10 gözlemden, P95 20 gözlemden önce gösterilmez.
+     İskelet her zaman vardır — veri sıfırken de kapılar görünür, çünkü
+     yeni başlayanın sorusu "önümde ne var?"dır. */
   function yorunge(muf, s) {
-    var seri = s.ilerlemeSerisi(60);
-    if (!seri) return null;
-    /* ilk gerçek kayıttan başla: baştaki sıfır kuyruğu grafiği ezmesin */
-    var ilk = 0;
-    while (ilk < seri.length - 1 && seri[ilk].pct === 0 && seri[ilk + 1].pct === 0) ilk++;
-    seri = seri.slice(ilk);
-    if (seri.length < 2) return null;
-
-    var kestirim = s.kestirim(100 - s.overallPct);
+    var esikler = s.kapiEsikleri();
+    if (!esikler.length) return null;
+    var sonKapi = esikler[esikler.length - 1].pct;
     var kapilar = s.kapiGecmisi() || {};
+    var seri = s.ilerlemeSerisi(60);
 
-    var W = 640, H = 190, solP = 30, sagP = 54, ustP = 12, altP = 22;
+    /* baştaki sıfır kuyruğunu at */
+    if (seri) {
+      var ilk = 0;
+      while (ilk < seri.length - 1 && seri[ilk].pct === 0 && seri[ilk + 1].pct === 0) ilk++;
+      seri = seri.slice(ilk);
+      if (seri.length < 2) seri = null;
+    }
+
+    var gozlem = (s.haftalikKazanc(20) || []).length;
+    var kestirim = s.kestirim(Math.max(0, sonKapi - s.overallPct));
+
+    var dar = (document.getElementById('pano').clientWidth || 640) < 420;
+    var W = 640, H = dar ? 210 : 240, solP = dar ? 26 : 46, sagP = 16, ustP = 10, altP = 24;
     var ic = W - solP - sagP, yuk = H - ustP - altP;
 
-    var haftaSayisi = seri.length;
-    var ileriHafta = (kestirim && kestirim.yeterli && kestirim.p95)
-      ? Math.min(kestirim.p95, 120) : 0;
-    var toplamHafta = haftaSayisi + ileriHafta;
+    var gecmisHafta = seri ? seri.length : 1;
+    var ileri = (kestirim && kestirim.yeterli && kestirim.p50)
+      ? Math.min(kestirim.p95 || kestirim.p50, 120) : 0;
+    var toplam = Math.max(gecmisHafta + ileri, 12);
 
-    function X(h) { return solP + ic * (h / Math.max(1, toplamHafta - 1)); }
+    function X(h) { return solP + ic * (h / Math.max(1, toplam - 1)); }
     function Y(p) { return ustP + yuk * (1 - p / 100); }
+    var bugunX = X(gecmisHafta - 1);
 
-    var g = ['<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' +
-      A.esc('Çekirdek ilerlemenin zaman içindeki seyri ve kestirim aralığı') + '">'];
+    var g = [];
+    var ozet = 'Kapı grafiği. Çekirdek ilerleme %' + s.overallPct + ', ' +
+      gozlem + ' hafta kayıtlı. ' + esikler.length + ' kapıdan ' +
+      Object.keys(kapilar).length + ' tanesi geçildi. ' +
+      (kestirim && kestirim.yeterli && kestirim.p85
+        ? 'Kestirim %85 için ' + kestirim.p85 + ' hafta.' : 'Kestirim kapalı.') +
+      ' Sayılar altındaki tabloda.';
+    g.push('<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + A.esc(ozet) + '">');
 
-    /* ızgara */
-    [0, 25, 50, 75, 100].forEach(function (p) {
-      g.push('<line x1="' + solP + '" y1="' + Y(p).toFixed(1) + '" x2="' + (W - sagP) +
-        '" y2="' + Y(p).toFixed(1) + '" stroke="currentColor" stroke-opacity="0.12"/>');
-      g.push('<text x="' + (solP - 5) + '" y="' + (Y(p) + 3).toFixed(1) +
-        '" font-size="8" text-anchor="end" fill="currentColor" opacity="0.45" ' +
-        'font-family="IBM Plex Mono, monospace">' + p + '</text>');
+    /* tavan bandı: son kapının üstü hiçbir kapının şartı değil */
+    g.push('<rect x="' + solP + '" y="' + Y(100).toFixed(1) + '" width="' + ic +
+      '" height="' + (Y(sonKapi) - Y(100)).toFixed(1) +
+      '" fill="currentColor" opacity="0.05"/>');
+    g.push('<text x="' + (W - sagP - 2) + '" y="' + (Y(100) + 9).toFixed(1) +
+      '" font-size="7.5" text-anchor="end" fill="currentColor" opacity="0.4" ' +
+      'font-family="IBM Plex Mono, monospace">4. basamak — kapı şartı değil</text>');
+
+    /* kapı ızgarası */
+    var siradaki = null;
+    esikler.forEach(function (e) { if (siradaki === null && !kapilar[e.id]) siradaki = e.id; });
+    esikler.forEach(function (e) {
+      var gecti = !!kapilar[e.id];
+      var y = Y(e.pct);
+      g.push('<line x1="' + solP + '" y1="' + y.toFixed(1) + '" x2="' + (W - sagP) +
+        '" y2="' + y.toFixed(1) + '" stroke="currentColor" stroke-opacity="' +
+        (gecti ? 0.22 : 0.12) + '"' + (gecti ? '' : ' stroke-dasharray="2 3"') + '/>');
+      /* dar ekranda yalnız sıradaki + son kapı adlandırılır; çizgiler kalır */
+      if (dar && e.id !== siradaki && e !== esikler[esikler.length - 1]) return;
+      g.push('<text x="' + (solP - 4) + '" y="' + (y + 2.5).toFixed(1) +
+        '" font-size="7.5" text-anchor="end" fill="currentColor" opacity="' +
+        (gecti ? 0.7 : 0.45) + '" font-family="IBM Plex Mono, monospace">' +
+        A.esc(dar ? e.tag.replace('FAZ ', 'F') : e.tag) + '</text>');
     });
 
-    /* kestirim konisi */
-    if (ileriHafta > 0) {
-      var x0 = X(haftaSayisi - 1), y0 = Y(s.overallPct);
-      var xp50 = X(haftaSayisi - 1 + Math.min(kestirim.p50, 120));
-      var xp95 = X(haftaSayisi - 1 + Math.min(kestirim.p95, 120));
-      g.push('<path d="M' + x0.toFixed(1) + ',' + y0.toFixed(1) +
-        ' L' + xp50.toFixed(1) + ',' + Y(100).toFixed(1) +
-        ' L' + xp95.toFixed(1) + ',' + Y(100).toFixed(1) + ' Z" ' +
-        'fill="var(--accent)" fill-opacity="0.14"/>');
-      [['p50', 0.55, '4 3'], ['p85', 0.8, '2 3']].forEach(function (c) {
-        var xw = X(haftaSayisi - 1 + Math.min(kestirim[c[0]], 120));
-        g.push('<line x1="' + x0.toFixed(1) + '" y1="' + y0.toFixed(1) + '" x2="' + xw.toFixed(1) +
-          '" y2="' + Y(100).toFixed(1) + '" stroke="var(--accent)" stroke-opacity="' + c[1] +
+    /* kestirim ışınları — gözlem sayısı arttıkça açılıyor */
+    if (ileri > 0) {
+      var y0 = Y(s.overallPct);
+      var isinlar = [['p50', 0.6, '5 3']];
+      if (gozlem >= 10 && kestirim.p85) isinlar.push(['p85', 0.4, '3 3']);
+      if (gozlem >= 20 && kestirim.p95) isinlar.push(['p95', 0.25, '2 4']);
+      var enGenis = isinlar[isinlar.length - 1][0];
+      g.push('<path d="M' + bugunX.toFixed(1) + ',' + y0.toFixed(1) +
+        ' L' + X(gecmisHafta - 1 + Math.min(kestirim.p50, 120)).toFixed(1) + ',' + Y(sonKapi).toFixed(1) +
+        ' L' + X(gecmisHafta - 1 + Math.min(kestirim[enGenis], 120)).toFixed(1) + ',' + Y(sonKapi).toFixed(1) +
+        ' Z" fill="var(--accent)" fill-opacity="0.12"/>');
+      isinlar.forEach(function (c) {
+        var xw = X(gecmisHafta - 1 + Math.min(kestirim[c[0]], 120));
+        g.push('<line x1="' + bugunX.toFixed(1) + '" y1="' + y0.toFixed(1) + '" x2="' + xw.toFixed(1) +
+          '" y2="' + Y(sonKapi).toFixed(1) + '" stroke="var(--accent)" stroke-opacity="' + c[1] +
           '" stroke-width="1" stroke-dasharray="' + c[2] + '"/>');
       });
     }
 
-    /* gerçekleşen çizgi */
-    var nokta = seri.map(function (x, i) { return X(i).toFixed(1) + ',' + Y(x.pct).toFixed(1); });
-    g.push('<polyline points="' + nokta.join(' ') + '" fill="none" stroke="var(--accent)" ' +
-      'stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>');
-    /* bugün noktası */
-    g.push('<circle cx="' + X(haftaSayisi - 1).toFixed(1) + '" cy="' + Y(s.overallPct).toFixed(1) +
-      '" r="3" fill="var(--accent)"/>');
+    /* gerçekleşen: n<5 ise ÇİZGİ YOK, yalnız nokta — iki nokta arasına
+       çizgi çekmek olmayan bir sürekliliği iddia etmektir */
+    if (seri && gozlem >= 5) {
+      g.push('<polyline points="' + seri.map(function (x, i) {
+        return X(i).toFixed(1) + ',' + Y(x.pct).toFixed(1);
+      }).join(' ') + '" fill="none" stroke="var(--accent)" stroke-width="2" ' +
+        'stroke-linejoin="round" stroke-linecap="round"/>');
+    } else if (seri) {
+      seri.forEach(function (x, i) {
+        if (!x.pct && i < seri.length - 1) return;
+        g.push('<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(x.pct).toFixed(1) +
+          '" r="2" fill="var(--accent)" opacity="0.75"/>');
+      });
+    }
 
-    /* geçilmiş kapılar: gerçekleşen çizgi üzerinde işaret */
+    /* geçilmiş kapı işaretleri */
     Object.keys(kapilar).forEach(function (pid) {
-      var k = kapilar[pid];
-      var idx = -1;
-      seri.forEach(function (x, i) { if (x.son >= k.tarih && idx < 0) idx = i; });
+      var k = kapilar[pid], idx = -1;
+      if (seri) seri.forEach(function (x, i) { if (x.son >= k.tarih && idx < 0) idx = i; });
       if (idx < 0) return;
       var p = A.phaseById(muf, pid);
       g.push('<circle cx="' + X(idx).toFixed(1) + '" cy="' + Y(k.pct).toFixed(1) +
         '" r="4" fill="' + A.barColor(p) + '" stroke="var(--surface)" stroke-width="1.5">' +
-        '<title>' + A.esc((p ? p.tag : pid) + ' kapısı — ' + k.tarih) + '</title></circle>');
+        '<title>' + A.esc((p ? p.tag : pid) + ' kapısı geçildi — ' + k.tarih) + '</title></circle>');
     });
 
-    /* eksen etiketleri: ilk ay, bugün, kestirim ucu */
-    var aylar = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
-    function ayEtiket(iso) {
-      var d = A.parseDate(iso); return d ? aylar[d.getMonth()] : '';
-    }
-    g.push('<text x="' + solP + '" y="' + (H - 6) + '" font-size="8" fill="currentColor" ' +
-      'opacity="0.45" font-family="IBM Plex Mono, monospace">' + ayEtiket(seri[0].son) + '</text>');
-    g.push('<text x="' + X(haftaSayisi - 1).toFixed(1) + '" y="' + (H - 6) +
-      '" font-size="8" text-anchor="middle" fill="currentColor" opacity="0.6" ' +
-      'font-family="IBM Plex Mono, monospace">bugün</text>');
-    if (ileriHafta > 0) {
-      g.push('<text x="' + (W - sagP) + '" y="' + (H - 6) + '" font-size="8" text-anchor="end" ' +
-        'fill="currentColor" opacity="0.45" font-family="IBM Plex Mono, monospace">' +
-        A.esc(String(kestirim.tarih95 || '').slice(0, 7)) + '</text>');
-    }
+    /* buradasın */
+    g.push('<circle cx="' + bugunX.toFixed(1) + '" cy="' + Y(s.overallPct).toFixed(1) +
+      '" r="3.5" fill="var(--accent)"/>');
+    g.push('<text x="' + bugunX.toFixed(1) + '" y="' + (H - 6) +
+      '" font-size="7.5" text-anchor="middle" fill="currentColor" opacity="0.6" ' +
+      'font-family="IBM Plex Mono, monospace">buradasın</text>');
     g.push('</svg>');
-    return { svg: g.join(''), kestirim: kestirim, kapiSayisi: Object.keys(kapilar).length };
+
+    return { svg: g.join(''), kestirim: kestirim, gozlem: gozlem,
+             esikler: esikler, kapilar: kapilar, sonKapi: sonKapi };
+  }
+
+  /* Erişilebilirlik: sayılar yalnız grafikte değil, gerçek bir tabloda.
+     Dar ekranda görünür, geniş ekranda <details> içinde — tek kaynak. */
+  function yorungeTablosu(muf, s, yor) {
+    var t = ['<table><thead><tr><th>Kapı</th><th class="num">Eşik</th>' +
+             '<th>Durum</th><th class="num">Geçildi</th></tr></thead><tbody>'];
+    yor.esikler.forEach(function (e) {
+      var k = yor.kapilar[e.id];
+      t.push('<tr><td>' + A.esc(e.tag) + '</td>' +
+        '<td class="num">%' + e.pct.toFixed(1) + '</td>' +
+        '<td>' + (k ? 'geçildi' : (s.overallPct >= e.pct ? 'eşik aşıldı, kapı açık değil' : 'önde')) + '</td>' +
+        '<td class="num">' + (k ? A.esc(k.tarih) : '—') + '</td></tr>');
+    });
+    t.push('</tbody></table>');
+    return t.join('');
   }
 
   function panoCiz(muf, st, agdan, taslakVar) {
@@ -270,28 +324,39 @@
     r.appendChild(k4);
     pano.appendChild(r);
 
-    /* --- yörünge + kestirim --- */
+    /* --- kapı grafiği + kestirim --- */
     var yor = yorunge(muf, s);
     if (yor) {
       var kutu = el('div', 'yorunge');
-      kutu.appendChild(el('div', 'baslik-mini', 'Yörünge — gerçekleşen ilerleme ve kestirim'));
+      kutu.appendChild(el('div', 'baslik-mini', 'Kapı grafiği — nerede olduğun, ne kadar kaldığı'));
       kutu.appendChild(el('div', 'cizim', yor.svg));
-      var k = yor.kestirim;
-      var metin;
-      if (k && k.yeterli && k.p85) {
-        /* Tek tarih vermek yanıltıcı: yüzdelik bandı ve gözlem sayısı birlikte. */
-        metin = '%85 güvenle <b>' + A.esc(k.tarih85) + '</b> (P50: ' + A.esc(k.tarih50) +
-          (k.tarih95 ? ', P95: ' + A.esc(k.tarih95) : '') + ') — ' + k.gozlem + ' haftalık gözlemden.' +
-          (k.zayif ? ' <b>Zayıf temel:</b> 10 haftadan az veriyle bu aralık kolayca 2–3 kat oynar.' : '');
+
+      var k = yor.kestirim, metin;
+      if (k && k.yeterli && k.p50) {
+        var p85 = (yor.gozlem >= 10 && k.tarih85)
+          ? '%85 güvenle <b>' + A.esc(k.tarih85) + '</b>, ' : '';
+        metin = 'Son kapıya (%' + yor.sonKapi.toFixed(0) + ') ' + p85 +
+          'yarı yarıya <b>' + A.esc(k.tarih50) + '</b> — ' + yor.gozlem + ' haftalık gözlemden.' +
+          (yor.gozlem < 10
+            ? ' <b>Zayıf temel:</b> 10 haftanın altında bu aralık kolayca 2–3 kat oynar, ' +
+              'o yüzden yalnız P50 gösteriliyor.'
+            : (yor.gozlem < 20 ? ' P95 için 20 haftalık gözlem gerekiyor.' : ''));
       } else if (k && k.durgun) {
         metin = A.esc(k.neden);
-      } else if (k) {
-        metin = A.esc(k.neden || '') + ' Şimdilik yalnız geçmiş gösteriliyor.';
+      } else if (k && k.neden) {
+        metin = A.esc(k.neden) + ' Grafikte yalnız kapılar ve geçmiş var.';
       }
       if (metin) kutu.appendChild(el('div', 'kestirim-metin', metin));
-      if (yor.kapiSayisi) {
-        kutu.appendChild(el('div', 'kestirim-metin',
-          'Renkli noktalar geçilmiş faz kapıları.'));
+
+      /* sayılar tabloda: dar ekranda açık, geniş ekranda <details> içinde */
+      var tabloHtml = '<div class="tblwrap">' + yorungeTablosu(muf, s, yor) + '</div>';
+      if (window.matchMedia('(max-width: 32rem)').matches) {
+        kutu.appendChild(el('div', null, tabloHtml));
+      } else {
+        var det = el('details');
+        det.appendChild(el('summary', 'baslik-mini', 'Kapı eşikleri (tablo)'));
+        det.appendChild(el('div', null, tabloHtml));
+        kutu.appendChild(det);
       }
       pano.appendChild(kutu);
     }
