@@ -58,16 +58,46 @@
      alsa bile "kaydedilmedi" uyarısını sonsuza kadar açık bırakır. */
   function icerikImzasi(st) {
     if (!st) return '';
-    var siraliItems = {};
-    Object.keys(st.items || {}).sort().forEach(function (k) { siraliItems[k] = st.items[k]; });
+    /* basamaklar sabit sıralı ikiliye indirgenir: nesne anahtar sırası
+       imzayı değiştirmesin */
+    var siraliItems = [];
+    Object.keys(st.items || {}).sort().forEach(function (k) {
+      var b = st.items[k];
+      siraliItems.push([k, (b && typeof b === 'object') ? b.n : b,
+                           (b && typeof b === 'object') ? (b.t || null) : null]);
+    });
     var siraliJournal = (st.journal || []).slice().sort(function (a, b) {
       return a.id === b.id ? 0 : (a.id < b.id ? -1 : 1);
     });
-    return JSON.stringify({ items: siraliItems, journal: siraliJournal });
+    var siraliOlay = (st.olaylar || []).slice().map(function (o) { return [o.d, o.id, o.n]; });
+    return JSON.stringify({ items: siraliItems, journal: siraliJournal, olaylar: siraliOlay });
   }
 
-  /* ---------- durum doğrulama ---------- */
-  function defaultState() { return { v: 1, items: {}, journal: [], updated: null }; }
+  /* ---------- durum doğrulama ----------
+     ŞEMA v2. Basamaklar artık zaman taşır:
+        items: { "z1": { "n": 3, "t": "2026-08-27" } }
+     v1 biçimi ( items: { "z1": 3 } ) OKUNMAYA devam eder ve okurken v2'ye
+     göçürülür; tarihi bilinmeyen eski kayıtlara t=null verilir (çürüme
+     hesabı "bilinmiyor" der, uydurmaz).
+     Ayrıca `olaylar`: yalnızca eklenen basamak günlüğü — geçmiş ilerleme
+     eğrisi ve hız buradan çıkar. items o günlüğün izdüşümüdür; ikisi
+     çelişirse items kazanır (tek yazıcı ikisini birlikte yazar). */
+  function defaultState() {
+    return { v: 2, items: {}, olaylar: [], journal: [], updated: null };
+  }
+
+  /* tek basamak kaydını iki biçimden de kabul et */
+  function basamakOku(ham, it) {
+    var n = null, t = null;
+    if (ham && typeof ham === 'object') {
+      n = parseInt(ham.n, 10);
+      t = (typeof ham.t === 'string' && TARIH.test(ham.t)) ? ham.t : null;
+    } else {
+      n = parseInt(ham, 10);
+    }
+    if (isNaN(n) || n <= 0) return null;
+    return { n: Math.min(n, itemMax(it)), t: t };
+  }
 
   function normalizeState(s, muf) {
     if (!s || typeof s !== 'object') return null;
@@ -78,9 +108,21 @@
     if (s.items && typeof s.items === 'object') {
       Object.keys(s.items).forEach(function (k) {
         var it = byId[k]; if (!it) return;
-        var v = parseInt(s.items[k], 10);
-        if (isNaN(v) || v <= 0) return;
-        out.items[k] = Math.min(v, itemMax(it));
+        var b = basamakOku(s.items[k], it);
+        if (b) out.items[k] = b;
+      });
+    }
+    if (Array.isArray(s.olaylar)) {
+      s.olaylar.forEach(function (o) {
+        if (!o || typeof o !== 'object') return;
+        var it = byId[o.id]; if (!it) return;
+        if (!TARIH.test(String(o.d))) return;
+        var n = parseInt(o.n, 10);
+        if (isNaN(n) || n < 0) return;
+        out.olaylar.push({ d: o.d, id: o.id, n: Math.min(n, itemMax(it)) });
+      });
+      out.olaylar.sort(function (a, b) {
+        return a.d === b.d ? 0 : (a.d < b.d ? -1 : 1);
       });
     }
     if (Array.isArray(s.journal)) {
@@ -100,14 +142,62 @@
     return out;
   }
 
-  /* ---------- istatistik ---------- */
-  function makeStats(muf, state) {
+  /* ---------- yazma ----------
+     Tek giriş noktası: basamak ataması hem izdüşümü (items) hem günlüğü
+     (olaylar) birlikte yazar. İkisi ayrı yerlerden yazılırsa kaçınılmaz
+     olarak ayrışırlar. defter.py'daki ikizi aynı davranmak zorundadır. */
+  function basamakAta(state, it, n, bugun) {
+    var gun = bugun || todayLocal();
+    var tavan = itemMax(it);
+    n = Math.max(0, Math.min(n, tavan));
+    var oncekiN = (function () {
+      var b = state.items[it.id];
+      if (!b) return 0;
+      return (typeof b === 'object') ? (b.n || 0) : (b || 0);
+    })();
+    if (n === oncekiN) return false;
+    if (n === 0) delete state.items[it.id];
+    else state.items[it.id] = { n: n, t: gun };
+    if (!Array.isArray(state.olaylar)) state.olaylar = [];
+    state.olaylar.push({ d: gun, id: it.id, n: n });
+    return true;
+  }
+
+  /* Aynı basamağı yeniden onayla ("tazeledim"): sayı değişmez, saat sıfırlanır.
+     Çürüme modelinin tek anlamlı girdisi budur. */
+  function tazele(state, it, bugun) {
+    var b = state.items[it.id];
+    var n = b ? ((typeof b === 'object') ? b.n : b) : 0;
+    if (!n) return false;
+    var gun = bugun || todayLocal();
+    state.items[it.id] = { n: n, t: gun };
+    if (!Array.isArray(state.olaylar)) state.olaylar = [];
+    state.olaylar.push({ d: gun, id: it.id, n: n });
+    return true;
+  }
+
+  /* ---------- istatistik ----------
+     `bugunIso` isteğe bağlı: verilirse "şimdi" o güne sabitlenir. Hafta,
+     seri, tazelik ve kestirim hesapları gerçek saate bağlı olduğu için
+     testlerin zamanla kaymaması ancak böyle sağlanabilir. */
+  function makeStats(muf, state, bugunIso) {
+    var SIMDI = (bugunIso && TARIH.test(bugunIso)) ? parseDate(bugunIso) : new Date();
     var items = (muf && muf.items) || [];
     var phases = (muf && muf.phases) || [];
     var lvlMap = (state && state.items) || {};
     var journal = (state && state.journal) || [];
 
-    function lvl(id) { var v = lvlMap[id]; return (v > 0) ? v : 0; }
+    function lvl(id) {
+      var b = lvlMap[id];
+      if (!b) return 0;
+      var n = (typeof b === 'object') ? b.n : b;   /* v1 toleransı */
+      return (n > 0) ? n : 0;
+    }
+    /* basamağın kazanıldığı gün (v1 verisinde bilinmiyor → null) */
+    function lvlDate(id) {
+      var b = lvlMap[id];
+      return (b && typeof b === 'object' && b.t) ? b.t : null;
+    }
     function phaseItems(pid) { return items.filter(function (i) { return i.p === pid; }); }
 
     function phasePct(pid) {
@@ -159,12 +249,12 @@
       var d = parseDate(e.date);
       if (d) byWeekday[(d.getDay() + 6) % 7] += h;
     });
-    var thisWeekKey = isoWeekKey(new Date());
+    var thisWeekKey = isoWeekKey(SIMDI);
     var hoursThisWeek = byWeek[thisWeekKey] || 0;
 
     /* son N haftanın serisi (eskiden yeniye) */
     function weekSeries(count) {
-      var out = [], base = weekStart(new Date());
+      var out = [], base = weekStart(SIMDI);
       for (var i = count - 1; i >= 0; i--) {
         var w = new Date(base.getFullYear(), base.getMonth(), base.getDate() - 7 * i);
         var k = todayLocal(w);
@@ -176,7 +266,7 @@
     /* haftalık seri: hedefi tutturulan ARDIŞIK hafta sayısı.
        Günlük seri değil — dinlenme gününü cezalandırmasın diye. */
     function weekStreak() {
-      var base = weekStart(new Date()), n = 0;
+      var base = weekStart(SIMDI), n = 0;
       /* bu hafta henüz sürüyor: hedefi tutmuşsa sayılır, tutmamışsa seriyi bozmaz */
       if ((byWeek[todayLocal(base)] || 0) >= HAFTA_HEDEF) n++;
       for (var i = 1; i < 260; i++) {
@@ -188,7 +278,7 @@
 
     /* ısı haritası: son `weeks` haftanın günleri, sütun = hafta */
     function heatmap(weeks) {
-      var today = new Date();
+      var today = SIMDI;
       var end = weekStart(today);
       var cols = [];
       for (var w = weeks - 1; w >= 0; w--) {
@@ -218,16 +308,69 @@
       if (e.yarin && e.yarin.trim()) lastYarin = { metin: e.yarin.trim(), date: e.date };
     });
 
+    /* ---- geçmiş: olay günlüğünü yeniden oynat ----
+       Çekirdek yüzdesinin zaman içindeki seyri. Kaynak `olaylar`; günlük
+       yoksa geçmiş de YOKTUR — düz bir çizgi uydurmak yerine null döner. */
+    var olaylar = (state && state.olaylar) || [];
+
+    function ilerlemeSerisi(haftaSayisi) {
+      if (!olaylar.length) return null;
+      var coreItems = items.filter(function (i) { return i.core; });
+      if (!coreItems.length) return null;
+      var coreSet = {};
+      coreItems.forEach(function (i) { coreSet[i.id] = i; });
+
+      var base = weekStart(SIMDI);
+      var sinirlar = [];
+      for (var i = haftaSayisi - 1; i >= 0; i--) {
+        sinirlar.push(new Date(base.getFullYear(), base.getMonth(), base.getDate() - 7 * i + 6));
+      }
+
+      var seviye = {}, oi = 0, cikti = [];
+      sinirlar.forEach(function (son) {
+        var sonKey = todayLocal(son);
+        while (oi < olaylar.length && olaylar[oi].d <= sonKey) {
+          var o = olaylar[oi];
+          if (o.n > 0) seviye[o.id] = o.n; else delete seviye[o.id];
+          oi++;
+        }
+        var s = 0;
+        coreItems.forEach(function (it) {
+          s += Math.min(seviye[it.id] || 0, itemMax(it)) / itemMax(it);
+        });
+        cikti.push({
+          hafta: todayLocal(weekStart(son)),
+          son: sonKey,
+          pct: Math.round(100 * s / coreItems.length)
+        });
+      });
+      return cikti;
+    }
+
+    /* Haftalık çekirdek-yüzde kazancı: kestirimin ham girdisi.
+       Yalnızca GEÇMİŞ (tamamlanmış) haftalar sayılır; içinde bulunulan
+       yarım hafta hızı olduğundan düşük gösterir. */
+    function haftalikKazanc(haftaSayisi) {
+      var seri = ilerlemeSerisi((haftaSayisi || 12) + 1);
+      if (!seri || seri.length < 2) return null;
+      var out = [];
+      for (var i = 1; i < seri.length - 1; i++) {   /* son eleman = bu hafta, atlanır */
+        out.push(Math.max(0, seri[i].pct - seri[i - 1].pct));
+      }
+      return out.length ? out : null;
+    }
+
     var dates = journal.map(function (e) { return e.date; }).filter(Boolean).sort();
     var lastDate = dates.length ? dates[dates.length - 1] : null;
     var daysSince = null;
     if (lastDate) {
       var ld = parseDate(lastDate);
-      if (ld) daysSince = dayDiff(ld, new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()));
+      if (ld) daysSince = dayDiff(ld, new Date(SIMDI.getFullYear(), SIMDI.getMonth(), SIMDI.getDate()));
     }
 
     return {
       lvl: lvl,
+      lvlDate: lvlDate,
       phaseItems: phaseItems,
       phasePct: phasePct,
       gate: gate,
@@ -241,6 +384,8 @@
       weekStreak: weekStreak,
       heatmap: heatmap,
       byWeekday: byWeekday,
+      ilerlemeSerisi: ilerlemeSerisi,
+      haftalikKazanc: haftalikKazanc,
       byDay: byDay,
       sessions: journal.length,
       lastDate: lastDate,
@@ -315,6 +460,8 @@
     passLevel: passLevel,
     levelNames: levelNames,
     normalizeState: normalizeState,
+    basamakAta: basamakAta,
+    tazele: tazele,
     defaultState: defaultState,
     stats: makeStats,
     load: load,

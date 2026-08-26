@@ -1,17 +1,45 @@
 #!/bin/sh
-# Çapraz test: defter.py (Python) ile atolye.js (JS) aynı ilerleme matematiğini
-# uygulamak zorunda. Ayrışırlarsa site ile terminal farklı şeyler söyler.
-# Kullanım: ./capraz-test.sh
+# Çapraz test: defter.py (Python) ile atolye.js (JS) aynı ilerleme
+# matematiğini uygulamak zorunda. Ayrışırlarsa site ile terminal farklı
+# şeyler söyler ve hangisinin doğru olduğu belli olmaz.
+#
+# "Bugün" SABİTLENİR (BUGUN değişkeni): hafta/seri/kestirim hesapları gerçek
+# saate bağlı olduğundan, sabitlemeden test zamanla kendiliğinden kayar.
+#
+# Yakaladığı gerçek hatalar (gerileme testi olarak duruyorlar):
+#  · Python round() bankacı yuvarlaması yapar (12.5→12), JS Math.round yukarı
+#    (→13). Yüzdeler bu yüzden ayrışıyordu; defter.py artık yuvarla() kullanır.
 set -eu
 KOK="$(cd "$(dirname "$0")" && pwd)"
 cd "$KOK"
 
+BUGUN="2026-08-27"
+
 ORNEK="$(mktemp -t atolye-test)"
 trap 'rm -f "$ORNEK" "$ORNEK.py" "$ORNEK.js"' EXIT
 
+# v1 (eski, zamansız) ve v2 (zamanlı) kayıtlar KARIŞIK: göç yolu da sınanır.
 cat > "$ORNEK" <<'EOF'
-{"v":1,"items":{"z1":3,"z2":2,"z3":1,"z4":2,"f0a":4,"f0b":3,"f0c":3,"f0d":4,"f0e":3,
-                "f1a":2,"f1d":1,"f2c":3,"gecersiz":7},
+{"v":2,
+ "items":{"z1":{"n":3,"t":"2026-07-06"},
+          "z2":{"n":2,"t":"2026-07-15"},
+          "z3":1,
+          "z4":{"n":2,"t":"2026-08-01"},
+          "f0a":{"n":4,"t":"2026-08-03"},
+          "f0b":{"n":3,"t":"2026-08-18"},
+          "f0c":3, "f0d":4, "f0e":3,
+          "f1a":{"n":2,"t":"2026-08-24"},
+          "f1d":1, "f2c":3,
+          "gecersizMadde":7,
+          "z1x":{"n":"abc"}},
+ "olaylar":[{"d":"2026-07-06","id":"z1","n":3},
+            {"d":"2026-07-15","id":"z2","n":2},
+            {"d":"2026-08-01","id":"z4","n":2},
+            {"d":"2026-08-03","id":"f0a","n":4},
+            {"d":"2026-08-18","id":"f0b","n":3},
+            {"d":"2026-08-24","id":"f1a","n":2},
+            {"d":"BOZUK","id":"f0c","n":3},
+            {"d":"2026-08-25","id":"yokBoyleMadde","n":2}],
  "journal":[{"id":"a","date":"2026-08-10","hours":2,"phase":"z"},
             {"id":"b","date":"2026-08-24","hours":3,"phase":"z"},
             {"id":"c","date":"2026-08-25","hours":4,"phase":"f0"},
@@ -21,42 +49,50 @@ cat > "$ORNEK" <<'EOF'
  "updated":"2026-08-26T10:00:00+03:00"}
 EOF
 
-python3 - "$ORNEK" > "$ORNEK.py" <<'EOF'
+python3 - "$ORNEK" "$BUGUN" > "$ORNEK.py" <<'EOF'
 import json, sys, importlib.util
 spec = importlib.util.spec_from_file_location('defter', 'defter.py')
 mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
 m = mod.mufredat_yukle()
 d = mod.normallestir(json.load(open(sys.argv[1])), m)
+bugun = sys.argv[2]
 print('cekirdek', mod.genel_yuzde(m, d))
 for p in m['phases']:
     print(p['id'], mod.faz_yuzdesi(m, d, p['id']), mod.kapi_durumu(m, d, p['id']))
-print('hafta', f"{mod.bu_hafta_saat(d):g}", 'toplam', f"{mod.toplam_saat(d):g}")
-print('seans', len(d['journal']))
+print('madde', len(d['items']), 'olay', len(d['olaylar']), 'seans', len(d['journal']))
 nx = mod.sonraki_madde(m, d)
 print('sonraki', nx['id'] if nx else '-')
+print('z1tarih', mod.sev_tarih(d, 'z1') or '-', 'z3tarih', mod.sev_tarih(d, 'z3') or '-')
+seri = mod.ilerleme_serisi(m, d, 6, bugun) or []
+print('seri', ' '.join(f"{x['son']}:{x['pct']}" for x in seri))
+print('kazanc', ' '.join(str(v) for v in (mod.haftalik_kazanc(m, d, 5, bugun) or [])))
 EOF
 
-node - "$ORNEK" > "$ORNEK.js" <<'EOF'
+node - "$ORNEK" "$BUGUN" > "$ORNEK.js" <<'EOF'
 global.window = {}; global.document = { getElementById: () => null };
 global.fetch = () => Promise.reject(new Error('offline'));
 require('./atolye.js');
 const A = global.window.Atolye, fs = require('fs');
 const muf = JSON.parse(fs.readFileSync('mufredat.json', 'utf8'));
 const st = A.normalizeState(JSON.parse(fs.readFileSync(process.argv[2], 'utf8')), muf);
-const s = A.stats(muf, st);
+const bugun = process.argv[3];
+const s = A.stats(muf, st, bugun);
 const ad = { on: 'GEÇİLDİ', run: 'sürüyor', off: 'başlamadı' };
 console.log('cekirdek', s.overallPct);
 muf.phases.forEach(p => console.log(p.id, s.phasePct(p.id), ad[s.gate(p.id)]));
-console.log('hafta', A.fmtHours(s.hoursThisWeek), 'toplam', A.fmtHours(s.totalHours));
-console.log('seans', s.sessions);
+console.log('madde', Object.keys(st.items).length, 'olay', st.olaylar.length, 'seans', s.sessions);
 console.log('sonraki', s.nextItem ? s.nextItem.id : '-');
+console.log('z1tarih', s.lvlDate('z1') || '-', 'z3tarih', s.lvlDate('z3') || '-');
+const seri = s.ilerlemeSerisi(6) || [];
+console.log('seri', seri.map(x => x.son + ':' + x.pct).join(' '));
+console.log('kazanc', (s.haftalikKazanc(5) || []).join(' '));
 EOF
 
 if diff -u "$ORNEK.py" "$ORNEK.js" > /dev/null; then
-  echo "✓ Python ve JS aynı sonucu veriyor:"
+  echo "✓ Python ve JS aynı sonucu veriyor (bugün=$BUGUN):"
   sed 's/^/    /' "$ORNEK.py"
 else
-  echo "✗ AYRIŞMA VAR (sol: Python, sağ: JS):" >&2
+  echo "✗ AYRIŞMA VAR (- Python, + JS):" >&2
   diff -u "$ORNEK.py" "$ORNEK.js" >&2 || true
   exit 1
 fi

@@ -19,6 +19,7 @@ Komutlar:
 import argparse
 import datetime as dt
 import json
+import math
 import pathlib
 import re
 import subprocess
@@ -54,7 +55,68 @@ def basamak_adlari(m, it):
 # ---------------- durum ----------------
 
 def bos_durum():
-    return {"v": 1, "items": {}, "journal": [], "updated": None}
+    return {"v": 2, "items": {}, "olaylar": [], "journal": [], "updated": None}
+
+
+def basamak_oku(ham, it):
+    """Basamağı iki şemadan da oku: v1 {id: 3} ve v2 {id: {"n":3,"t":"..."}}."""
+    if isinstance(ham, dict):
+        try:
+            n = int(ham.get("n"))
+        except (TypeError, ValueError):
+            return None
+        t = ham.get("t")
+        t = t if isinstance(t, str) and TARIH_DESENI.match(t) else None
+    else:
+        try:
+            n = int(ham)
+        except (TypeError, ValueError):
+            return None
+        t = None
+    if n <= 0:
+        return None
+    return {"n": min(n, tavan(it)), "t": t}
+
+
+def sev(d, mid):
+    """Maddenin güncel basamağı (yoksa 0)."""
+    b = d["items"].get(mid)
+    if not b:
+        return 0
+    n = b["n"] if isinstance(b, dict) else b
+    return n if n and n > 0 else 0
+
+
+def sev_tarih(d, mid):
+    """Basamağın kazanıldığı gün; v1 verisinde bilinmez → None."""
+    b = d["items"].get(mid)
+    return b.get("t") if isinstance(b, dict) else None
+
+
+def basamak_ata(d, it, n, bugun=None):
+    """Tek yazma yolu: izdüşüm (items) ve günlük (olaylar) birlikte yazılır.
+    atolye.js'teki basamakAta ile aynı davranmak ZORUNDA."""
+    gun = bugun or dt.date.today().isoformat()
+    n = max(0, min(int(n), tavan(it)))
+    if n == sev(d, it["id"]):
+        return False
+    if n == 0:
+        d["items"].pop(it["id"], None)
+    else:
+        d["items"][it["id"]] = {"n": n, "t": gun}
+    d.setdefault("olaylar", []).append({"d": gun, "id": it["id"], "n": n})
+    return True
+
+
+def tazele_madde(d, it, bugun=None):
+    """Aynı basamağı yeniden onayla: sayı sabit, saat sıfırlanır."""
+    n = sev(d, it["id"])
+    if not n:
+        return False
+    gun = bugun or dt.date.today().isoformat()
+    d["items"][it["id"]] = {"n": n, "t": gun}
+    d.setdefault("olaylar", []).append({"d": gun, "id": it["id"], "n": n})
+    return True
 
 
 def normallestir(ham, m):
@@ -69,12 +131,25 @@ def normallestir(ham, m):
             it = m["by_id"].get(k)
             if it is None:
                 continue
+            b = basamak_oku(v, it)
+            if b:
+                out["items"][k] = b
+    olaylar = ham.get("olaylar")
+    if isinstance(olaylar, list):
+        for o in olaylar:
+            if not isinstance(o, dict):
+                continue
+            it = m["by_id"].get(o.get("id"))
+            if it is None or not TARIH_DESENI.match(str(o.get("d"))):
+                continue
             try:
-                v = int(v)
+                n = int(o.get("n"))
             except (TypeError, ValueError):
                 continue
-            if v > 0:
-                out["items"][k] = min(v, tavan(it))
+            if n < 0:
+                continue
+            out["olaylar"].append({"d": o["d"], "id": o["id"], "n": min(n, tavan(it))})
+        out["olaylar"].sort(key=lambda x: x["d"])
     kayitlar = ham.get("journal")
     if isinstance(kayitlar, list):
         for e in kayitlar:
@@ -118,6 +193,16 @@ def durum_kaydet(d):
     )
 
 
+
+def yuvarla(x):
+    """JS Math.round ile AYNI davranış (yarımı yukarı).
+    Python'un yerleşik round()'u bankacı yuvarlaması yapar: round(12.5)==12
+    ama Math.round(12.5)==13. İki uygulama bu yüzden sessizce ayrışıyordu;
+    yüzde hesaplarında hep bunu kullan. (Değerler negatif olmadığı için
+    floor(x+0.5) yeterli.)"""
+    return math.floor(x + 0.5)
+
+
 # ---------------- hesaplar ----------------
 
 def faz_maddeleri(m, pid):
@@ -128,25 +213,25 @@ def faz_yuzdesi(m, d, pid):
     its = faz_maddeleri(m, pid)
     if not its:
         return 0
-    s = sum(d["items"].get(it["id"], 0) / tavan(it) for it in its)
-    return round(100 * s / len(its))
+    s = sum(sev(d, it["id"]) / tavan(it) for it in its)
+    return yuvarla(100 * s / len(its))
 
 
 def kapi_durumu(m, d, pid):
     cekirdek = [it for it in faz_maddeleri(m, pid) if it.get("core")]
-    hepsi_gecti = all(d["items"].get(it["id"], 0) >= gecis_esigi(it) for it in cekirdek)
-    biri_tavanda = any(d["items"].get(it["id"], 0) >= tavan(it) for it in cekirdek)
+    hepsi_gecti = all(sev(d, it["id"]) >= gecis_esigi(it) for it in cekirdek)
+    biri_tavanda = any(sev(d, it["id"]) >= tavan(it) for it in cekirdek)
     if hepsi_gecti and biri_tavanda:
         return "GEÇİLDİ"
-    if any(d["items"].get(it["id"], 0) > 0 for it in faz_maddeleri(m, pid)):
+    if any(sev(d, it["id"]) > 0 for it in faz_maddeleri(m, pid)):
         return "sürüyor"
     return "başlamadı"
 
 
 def genel_yuzde(m, d):
     cekirdek = [it for it in m["items"] if it.get("core")]
-    s = sum(d["items"].get(it["id"], 0) / tavan(it) for it in cekirdek)
-    return round(100 * s / len(cekirdek))
+    s = sum(sev(d, it["id"]) / tavan(it) for it in cekirdek)
+    return yuvarla(100 * s / len(cekirdek))
 
 
 def hafta_baslangici(gun=None):
@@ -186,10 +271,51 @@ def hafta_saatleri(d, hafta_sayisi=8):
     return sorted(kovalar.items())
 
 
+
+def ilerleme_serisi(m, d, hafta_sayisi, bugun=None):
+    """Çekirdek yüzdesinin zaman içindeki seyri; kaynak olay günlüğü.
+    Günlük yoksa None döner — düz çizgi uydurulmaz.
+    atolye.js'teki ilerlemeSerisi ile aynı sonucu vermek ZORUNDA."""
+    olaylar = d.get("olaylar") or []
+    if not olaylar:
+        return None
+    cekirdek = [i for i in m["items"] if i.get("core")]
+    if not cekirdek:
+        return None
+    bugun = dt.date.fromisoformat(bugun) if bugun else dt.date.today()
+    base = hafta_baslangici(bugun)
+    sinirlar = [base - dt.timedelta(weeks=i) + dt.timedelta(days=6)
+                for i in range(hafta_sayisi - 1, -1, -1)]
+    seviye, oi, cikti = {}, 0, []
+    for son in sinirlar:
+        son_key = son.isoformat()
+        while oi < len(olaylar) and olaylar[oi]["d"] <= son_key:
+            o = olaylar[oi]
+            if o["n"] > 0:
+                seviye[o["id"]] = o["n"]
+            else:
+                seviye.pop(o["id"], None)
+            oi += 1
+        toplam = sum(min(seviye.get(it["id"], 0), tavan(it)) / tavan(it) for it in cekirdek)
+        cikti.append({"hafta": hafta_baslangici(son).isoformat(),
+                      "son": son_key,
+                      "pct": yuvarla(100 * toplam / len(cekirdek))})
+    return cikti
+
+
+def haftalik_kazanc(m, d, hafta_sayisi=12, bugun=None):
+    """Haftalık çekirdek-yüzde kazancı; içinde bulunulan yarım hafta hariç."""
+    seri = ilerleme_serisi(m, d, hafta_sayisi + 1, bugun)
+    if not seri or len(seri) < 2:
+        return None
+    out = [max(0, seri[i]["pct"] - seri[i - 1]["pct"]) for i in range(1, len(seri) - 1)]
+    return out or None
+
+
 def sonraki_madde(m, d):
     """Sıradaki çekirdek madde: en düşük fazda, eşiği geçmemiş ilk çekirdek."""
     for it in m["items"]:
-        if it.get("core") and d["items"].get(it["id"], 0) < gecis_esigi(it):
+        if it.get("core") and sev(d, it["id"]) < gecis_esigi(it):
             return it
     return None
 
@@ -242,11 +368,11 @@ def cmd_durum(m, d, _args):
         kapi = kapi_durumu(m, d, p["id"])
         print(f"{p['tag']:<6} {cubuk(pct)} %{pct:<4} {kapi:<10} {p['name']}")
     acik = [it for it in m["items"]
-            if it.get("core") and d["items"].get(it["id"], 0) < gecis_esigi(it)]
+            if it.get("core") and sev(d, it["id"]) < gecis_esigi(it)]
     if acik:
         ilk = acik[0]
         adlar = basamak_adlari(m, ilk)
-        simdiki = d["items"].get(ilk["id"], 0)
+        simdiki = sev(d, ilk["id"])
         print(f"\nSıradaki çekirdek madde: [{ilk['id']}] {ilk['lbl']}"
               f" — şu an: {adlar[simdiki]}")
     son = max((e["date"] for e in d["journal"]), default=None)
@@ -262,7 +388,7 @@ def cmd_liste(m, d, args):
         print(f"\n{p['tag']} — {p['name']}")
         for it in faz_maddeleri(m, p["id"]):
             adlar = basamak_adlari(m, it)
-            sev = d["items"].get(it["id"], 0)
+            sev = sev(d, it["id"])
             isaret = "Ç" if it.get("core") else " "
             print(f"  [{it['id']:<4}] {isaret} {sev}/{tavan(it)} {adlar[sev]:<22} {it['lbl']}")
     print()
@@ -274,10 +400,9 @@ def cmd_seviye(m, d, args):
         sys.exit(f"HATA: bilinmeyen madde '{args.madde}'. Kimlikler için: python3 defter.py liste")
     if not (0 <= args.basamak <= tavan(it)):
         sys.exit(f"HATA: {args.madde} için basamak 0–{tavan(it)} arası olmalı.")
-    if args.basamak == 0:
-        d["items"].pop(args.madde, None)
-    else:
-        d["items"][args.madde] = args.basamak
+    if not basamak_ata(d, it, args.basamak):
+        print(f"{it['lbl']} zaten {args.basamak}. basamakta — değişiklik yok.")
+        return
     durum_kaydet(d)
     adlar = basamak_adlari(m, it)
     print(f"{it['lbl']} → {args.basamak} ({adlar[args.basamak]})")
@@ -356,7 +481,7 @@ def cmd_bugun(m, d, _args):
         print("Tüm çekirdek maddeler eşiği geçti. 🎉 Kalanlar seçmeli.\n")
     else:
         adlar = basamak_adlari(m, it)
-        sev = d["items"].get(it["id"], 0)
+        sev = sev(d, it["id"])
         hedef = gecis_esigi(it)
         print(f"  SIRADAKİ  [{it['id']}] {it['lbl']}")
         print(f"            şu an: {adlar[sev]}  →  hedef: {adlar[hedef]}")
@@ -432,7 +557,7 @@ def cmd_rapor(m, d, args):
         pct = faz_yuzdesi(m, d, p["id"])
         kapi = kapi_durumu(m, d, p["id"])
         cekirdek = [i for i in faz_maddeleri(m, p["id"]) if i.get("core")]
-        eksik = [i for i in cekirdek if d["items"].get(i["id"], 0) < gecis_esigi(i)]
+        eksik = [i for i in cekirdek if sev(d, i["id"]) < gecis_esigi(i)]
         ek = f"kapıya {len(eksik)} madde" if eksik and pct > 0 else ""
         print(f"  {p['tag']:<6} {cubuk(pct)} %{pct:<4} {kapi:<10} {ek}")
 

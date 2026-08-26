@@ -242,10 +242,7 @@
     var yeni = (simdi === n) ? Math.max(0, n - 1) : n;
     if (yeni === simdi) return;
     var oncekiKapi = s.gate(it.p);
-    degistir(function () {
-      if (yeni === 0) delete state.items[it.id];
-      else state.items[it.id] = yeni;
-    });
+    degistir(function () { A.basamakAta(state, it, yeni); });
     var adlar = A.levelNames(muf, it);
     if (s.gate(it.p) === 'on' && oncekiKapi !== 'on') {
       toast('🎉 ' + (A.phaseById(muf, it.p) || {}).tag + ' kapısı geçildi!');
