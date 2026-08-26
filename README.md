@@ -40,7 +40,8 @@ eğitim paketi gerekir) ya da site yerelde `node serve.mjs` ile yaşar.
 | `durum.json` | **İlerlemenin tek kaynağı** — git ile izlenir |
 | `defter.py` + `atolye` | Terminal aracı: `bugun`, `rapor`, `seviye`, `seans`, `yayinla` (yalnız stdlib) |
 | `defter.html` + `defter.js` | Etkileşimli defter: ⌘K paleti, j/k + 0–4 klavye, geri al, seans günlüğü |
-| `atolye.js` | İlerleme matematiğinin tek kaynağı (defter.py'ın JS ikizi) |
+| `atolye.js` | İlerleme + tazelik + kestirim matematiği (defter.py'ın JS ikizi) |
+| `kanit.js` | Kanıt katmanı: depo klasörleri ve git geçmişi |
 | `pano.js` / `github.js` | Ana pano çizimi / opsiyonel tarayıcıdan-depoya-yazma |
 | `sw.js` + `manifest.json` | Çevrimdışı çalışma + telefona kurulum (PWA) |
 | `stil.css` / `serve.mjs` | Ortak stil / yerel önizleme sunucusu |
@@ -63,6 +64,7 @@ atolye seviye z1 3 -y           # basamak ata + commit + push (tek komut)
 atolye seans --saat 2.5 --faz f0 --yaptim "micrograd yeniden yazıldı" \
     --anlamadim "topo sort sırası" --yarin "makemore 1" -y
 atolye rapor                    # haftalık retro: saat grafiği, en verimli gün, kapıya kalan
+atolye tazele                   # yarılanmayı geçmiş maddeler · atolye tazele z1 -y
 atolye durum | atolye liste f0  # pano | madde kimlikleri
 atolye ac                       # canlı siteyi aç · atolye site → yerel sunucu
 ```
@@ -96,11 +98,44 @@ tam çalışır; kayıt `durum.json indir` ya da terminal ile yapılır.
 | Tuş | İş |
 |---|---|
 | `⌘K` / `/` | komut paleti (madde, faz, komut ara) |
+| `t` | odaktaki maddeyi tazele (yeniden türettim) |
 | `j` / `k` | maddeler arasında gez |
 | `0`–`4` | odaktaki maddeye basamak ata |
 | `u` | geri al |
 | `n` | yeni seans |
 | `?` | kısayolları göster |
+
+## Üç katman — bu neden bir işaret listesi değil
+
+Atölye sadece ne dediğini kaydetmez; söylediğini denetler, çürümesini
+modeller ve nereye vardığını kestirir.
+
+**KANIT.** Kapı kuralı "kanıtı commit'tir" diyor, o yüzden site depoya bakar:
+her faz klasörünün dosyaları ve commit geçmişi (`git/trees` + `commits?path=`,
+9 istek, 30 dakikalık kendi önbelleği). Bir fazda "kapalı kitap yazdım" ya da
+üstü işaretliyken klasörde kurulum README'si dışında dosya *görünmüyorsa* bir
+not düşülür. Suçlama değil: çalışma başka bir depoda ya da henüz
+commit'lenmemiş olabilir. Dikkat edilen ayrım: **"bakılmadı" ile "bakıldı,
+boştu" asla aynı görünmez** — karışırlarsa katman yalan söyler.
+
+**TAZELİK.** Ustalık çürür. Model FSRS-6'nın kuvvet yasası; basamak→kararlılık
+eşlemesi öyle denk geliyor ki 3. basamağın yarılanma ömrü (199 gün ≈ 6,5 ay)
+Tatel & Ackerman'ın 2025 meta-analizinde prosedürel beceri için ölçülen
+"kazanımın yarısı ~6,5 ayda gider" bulgusuyla örtüşüyor. Eşik bilinçli olarak
+gevşek: **"gecikmiş" diye bir kavram yok**, kuyruk en fazla 3 madde gösterir,
+sayaç birikmez. Gerekçe ölçülü: Anki yığını anketinde kullanıcıların %82'si
+aracı bunaltıcı buluyor, %75'i eski tekrarları hiç yetiştiremiyor. Yeniden
+türetebildiysen `atolye tazele <madde>` — basamak değişmez, saat sıfırlanır.
+
+**KESTİRİM.** Haftalık ilerleme geçmişinden Monte Carlo yeniden örnekleme
+(10.000 deneme), sonuç tek tarih değil bant: P50 / P85 / P95. **5 gözlemin
+altında hiçbir tarih verilmez** — n=5'te P85 ile P95 aynı sayıya çöker ve
+bilgi taşımaz. 10'un altında "zayıf temel" uyarısı düşer, çünkü ölçüm o
+aralıkta tahminin kendisinin 2–3 kat oynadığını gösteriyor.
+
+Üçünün de matematiği `atolye.js` ile `defter.py` içinde İKİ KEZ yazılı;
+`./capraz-test.sh` ikisinin aynı sayıyı verdiğini doğrular (Monte Carlo dahil:
+üreteç tohumlu ve bit-bit aynı). Ayrışırlarsa test kırmızı yanar.
 
 ## Yöntem (kısa)
 

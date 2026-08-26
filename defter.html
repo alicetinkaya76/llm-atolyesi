@@ -55,7 +55,10 @@
   .kanit:hover { border-color: var(--accent); color: var(--accent); }
   .kanit.var { border-color: var(--ok); color: var(--ok); }
   .kanit.acik { border-color: var(--warn); color: var(--warn); }
-  .kanit.yok-veri { opacity: 0.5; }
+  /* "bakılmadı" kesik çizgili ve sönük; "iskelet" normal çerçeveli ama
+     nötr — ikisi karışırsa kanıt katmanı yalan söyler */
+  .kanit.bakilmadi { opacity: 0.45; border-style: dashed; }
+  .kanit.iskelet { opacity: 0.75; }
   .gate { font-family: "IBM Plex Mono", monospace; font-size: 0.63rem; padding: 0.18em 0.55em; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
   .gate.on { border-color: var(--ok); color: var(--ok); font-weight: 600; }
   .gate.run { border-color: var(--warn); color: var(--warn); }

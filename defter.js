@@ -212,21 +212,30 @@
     el2.rel = 'noopener';
     el2.addEventListener('click', function (ev) { ev.stopPropagation(); });
 
+    /* K0 ("bakılmadı") ile K1 ("bakıldı, iskeletten başka şey yok") ASLA
+       aynı görünmemeli: karışırlarsa katman yalan söyler. Ayrı metin,
+       ayrı stil. */
     if (!kanitVeri || kanitVeri.hata) {
-      el2.className = 'kanit yok-veri';
-      el2.textContent = klasor + '/';
+      el2.className = 'kanit bakilmadi';
+      el2.textContent = 'kanıt okunmadı';
       el2.title = kanitVeri && kanitVeri.hata === 'kota'
-        ? 'GitHub istek sınırı doldu; kanıt sonra tazelenecek.'
-        : 'Kanıt henüz okunmadı.';
+        ? 'GitHub istek sınırına takıldı; kanıt bu ziyarette okunamadı.'
+        : 'Kanıt okunamadı (çevrimdışı ya da henüz denenmedi).';
       return el2;
     }
     var k = kanitVeri.fazlar[p.id];
-    if (!k) { el2.className = 'kanit yok-veri'; el2.textContent = klasor + '/'; return el2; }
+    if (!k) {
+      el2.className = 'kanit bakilmadi';
+      el2.textContent = 'kanıt okunmadı';
+      return el2;
+    }
 
     var satir = kanitKarsi && kanitKarsi.filter(function (x) { return x.id === p.id; })[0];
     var acik = satir && satir.acik;
-    el2.className = 'kanit' + (acik ? ' acik' : (k.kanitDosya > 0 ? ' var' : ''));
-    el2.textContent = klasor + '/ ' + (k.kanitDosya > 0 ? k.kanitDosya + ' dosya' : '—');
+    el2.className = 'kanit' + (acik ? ' acik' : (k.kanitDosya > 0 ? ' var' : ' iskelet'));
+    el2.textContent = k.kanitDosya > 0
+      ? klasor + '/ ' + k.kanitDosya + ' dosya'
+      : klasor + '/ iskelet';
     el2.title = acik
       ? 'Bu fazda ' + satir.iddia + ' madde "kapalı kitap yazdım" ya da üstünde, ama ' +
         klasor + '/ klasöründe README dışında dosya görünmüyor. Kanıt başka bir depoda ' +
@@ -449,10 +458,12 @@
         var ad = acikFaz.map(function (x) { return esc(x.klasor) + '/'; }).join(', ');
         var toplam = acikFaz.reduce(function (n, x) { return n + x.iddia; }, 0);
         k.appendChild(el('div', 'banner',
-          '<b>Kanıt notu:</b> ' + toplam + ' maddede "kapalı kitap yazdım" ya da üstü ' +
-          'işaretli, ama ' + ad + ' klasöründe README dışında dosya görünmüyor. ' +
-          'Kanıt başka bir depoda ya da henüz push\'lanmamış olabilir — bu bir hata değil, ' +
-          'yalnızca bir hatırlatma.'));
+          '<b>Kanıt notu.</b> ' + toplam + ' maddede "kapalı kitap yazdım" ya da üstü ' +
+          'işaretli, ama ' + ad + ' klasöründe kurulum README\'si dışında dosya ' +
+          '<i>görünmüyor</i>. Bu bir hata değil bir boşluk: çalışma büyük olasılıkla ' +
+          'başka bir yerde — ayrı bir depo, bir Colab defteri ya da henüz ' +
+          'commit\'lenmemiş bir çalışma dizini. Buraya bir kopya ya da not koyarsan ' +
+          'kapı kuralı kendi kendini denetler.'));
       }
     }
     if (!agdan) {
