@@ -11,7 +11,7 @@
      · GERİSİ (css/js/ikon): cache-first, arkada tazelenir.
    SURUM her dağıtımda elle artırılır: sw.js baytları değişmezse tarayıcı
    yeni worker'ı hiç kurmaz ve eski önbellek sonsuza kadar yaşar. */
-const SURUM = 'atolye-20260827-0050';
+const SURUM = 'atolye-20260827-0051';
 const KABUK = SURUM + '-kabuk';
 const VERI = SURUM + '-veri';
 

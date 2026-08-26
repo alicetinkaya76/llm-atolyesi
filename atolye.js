@@ -161,7 +161,18 @@
      %68'i kaygı verici buluyor ve %75'i eski tekrarları hiç yetiştiremiyor.
      Bu yüzden burada "gecikmiş" diye bir kavram yok: bir madde ancak
      YARILANMA ÖMRÜNÜ geçtiğinde öneri listesine girer (3. basamak için
-     ~6.6 ay), kuyruk en fazla 3 madde gösterir ve hiçbir sayaç birikmez. */
+     ~6.6 ay), kuyruk en fazla 3 madde gösterir ve hiçbir sayaç birikmez.
+
+     BİLEREK KULLANMADIĞIMIZ ŞEY — FSRS'in kararlılık GÜNCELLEMESİ.
+     FSRS her başarılı tekrarda S'i büyütür; cazip görünür ama burada
+     patlıyor. Ölçüldü: 3. basamakta (S=2.2) zamanında art arda "iyi"
+     notları S'i 2.2 → 26.7 → 223.5 → 1379.6 → 6652 güne çıkarıyor; üçüncü
+     tekrarda vade ~21 yıl oluyor. Sebep, FSRS'in iki günlük kartlara göre
+     kalibre olması; biz S'e "6.5 aylık yarılanma" anlamı yüklediğimiz için
+     üs terimi devasa çıkıyor ve Tatel & Ackerman'ın ufkuyla (2 yılda 2 SD)
+     doğrudan çelişiyor. Bu yüzden S HER ZAMAN basamaktan yeniden hesaplanır,
+     asla biriktirilmez. Bedeli bilinçli: tekrarlı geri getirme kredi
+     kazandırmaz — burada kredi mekanizması basamağın kendisidir. */
   var FSRS_DECAY = -0.1542;
   var FSRS_FACTOR = 0.9803464944134797;   /* 0.9^(1/DECAY) - 1 */
   var YARILANMA_KAT = 90.355;             /* R=0.5 anı = KAT * S */
