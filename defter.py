@@ -3,29 +3,30 @@
 """LLM Atölye Defteri — müstakil takip aracı.
 
 Veri tek kaynakta yaşar: durum.json (git ile izlenir).
-Müfredat mufredat.json'dadır. Bu betik hem terminal panosu hem de
-kendi kendine yeten bir HTML defter (defter.html) üretir.
+Müfredat mufredat.json'dadır. Site (index/defter/fazlar) aynı iki dosyayı
+tarayıcıda okur; bu betik terminal tarafıdır. İlerleme matematiğinin JS
+ikizi atolye.js'tedir — biri değişirse diğeri de değişmeli
+(./capraz-test.sh ikisini karşılaştırır).
 
 Komutlar:
-  python3 defter.py durum                  # terminal panosu
-  python3 defter.py liste [faz]            # madde kimlikleri
-  python3 defter.py seviye f0a 3           # ustalık basamağı ata
-  python3 defter.py seans --saat 2.5 --faz f0 --yaptim "..." \
-        [--ogrendim ...] [--anlamadim ...] [--yarin ...] [--tarih YYYY-MM-DD]
-  python3 defter.py html                   # defter.html'i yeniden üret
-  python3 defter.py ice-aktar yedek.json   # dış yedeği durum.json yap
+  atolye                                   # bugün ne yapmalıyım
+  atolye durum | rapor | liste [faz]
+  atolye seviye f0a 3 [-y]                 # ustalık basamağı ata (+ yayınla)
+  atolye seans --saat 2.5 --faz f0 --yaptim "..." [-y]
+  atolye yayinla                           # commit + push
+  atolye ice-aktar yedek.json              # dış yedeği durum.json yap
 """
 import argparse
 import datetime as dt
 import json
 import pathlib
 import re
+import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent
 MUFREDAT_YOLU = ROOT / "mufredat.json"
 DURUM_YOLU = ROOT / "durum.json"
-HTML_YOLU = ROOT / "defter.html"
 
 TARIH_DESENI = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -170,6 +171,60 @@ def toplam_saat(d):
     return sum(e["hours"] for e in d["journal"])
 
 
+def hafta_saatleri(d, hafta_sayisi=8):
+    """Son N ISO haftasının saat toplamı: [(hafta_baslangici, saat), ...] eskiden yeniye."""
+    bu = hafta_baslangici()
+    kovalar = {bu - dt.timedelta(weeks=i): 0.0 for i in range(hafta_sayisi)}
+    for e in d["journal"]:
+        try:
+            g = dt.date.fromisoformat(e["date"])
+        except ValueError:
+            continue
+        hb = hafta_baslangici(g)
+        if hb in kovalar:
+            kovalar[hb] += e["hours"]
+    return sorted(kovalar.items())
+
+
+def sonraki_madde(m, d):
+    """Sıradaki çekirdek madde: en düşük fazda, eşiği geçmemiş ilk çekirdek."""
+    for it in m["items"]:
+        if it.get("core") and d["items"].get(it["id"], 0) < gecis_esigi(it):
+            return it
+    return None
+
+
+def faz_sayfasi(pid):
+    """Faz kimliği → haftalık plan sayfası. Kimlikler f0..f5, dosyalar faz0..faz5."""
+    return "fazlar/zemin.html" if pid == "z" else f"fazlar/faz{str(pid)[1:]}.html"
+
+
+def faz_adi(m, pid):
+    for p in m["phases"]:
+        if p["id"] == pid:
+            return p["tag"] + " — " + p["name"]
+    return pid
+
+
+# ---------------- git ----------------
+
+def git(*argv, sessiz=False):
+    """Depoda git komutu koştur; (basarili, cikti) döndür."""
+    try:
+        r = subprocess.run(["git", *argv], cwd=ROOT, capture_output=True,
+                           text=True, timeout=120)
+    except (OSError, subprocess.SubprocessError) as e:
+        return False, str(e)
+    cikti = (r.stdout + r.stderr).strip()
+    if r.returncode != 0 and not sessiz:
+        return False, cikti
+    return r.returncode == 0, cikti
+
+
+def git_var():
+    return (ROOT / ".git").exists()
+
+
 # ---------------- komutlar ----------------
 
 def cubuk(pct, genislik=20):
@@ -228,7 +283,8 @@ def cmd_seviye(m, d, args):
     print(f"{it['lbl']} → {args.basamak} ({adlar[args.basamak]})")
     kapi = kapi_durumu(m, d, it["p"])
     if kapi == "GEÇİLDİ":
-        print(f"🎉 {it['p']} kapısı GEÇİLDİ.")
+        print(f"🎉 {faz_adi(m, it['p'])} kapısı GEÇİLDİ.")
+    belki_yayinla(m, d, args, f"defter: {args.madde} → {args.basamak} ({adlar[args.basamak]})")
 
 
 def cmd_seans(m, d, args):
@@ -252,20 +308,140 @@ def cmd_seans(m, d, args):
     durum_kaydet(d)
     print(f"Seans kaydedildi: {tarih}, {args.saat or 0:g} sa. "
           f"Bu hafta toplam: {bu_hafta_saat(d):g} sa.")
+    belki_yayinla(m, d, args, f"seans: {tarih} ({args.saat or 0:g} sa)"
+                              + (f" — {args.yaptim[:60]}" if args.yaptim else ""))
 
 
-def cmd_html(m, d, args):
-    def json_gom(v):
-        return json.dumps(v, ensure_ascii=False).replace("<", "\\u003c")
+def yayinla(m, d, mesaj):
+    """durum.json'u commit'le ve push'la; site kendini günceller."""
+    if not git_var():
+        print("Not: burası bir git deposu değil — yalnızca dosyalar güncellendi.")
+        return False
+    ok, _ = git("add", "durum.json")
+    if not ok:
+        print("UYARI: git add başarısız.")
+        return False
+    ok, cikti = git("diff", "--cached", "--quiet", sessiz=True)
+    if ok:  # returncode 0 → değişiklik yok
+        print("Değişiklik yok; yayınlanacak bir şey bulunamadı.")
+        return False
+    ok, cikti = git("commit", "-m", mesaj)
+    if not ok:
+        print(f"UYARI: commit başarısız:\n{cikti}")
+        return False
+    ok, cikti = git("push")
+    if not ok:
+        print(f"UYARI: push başarısız (commit yerelde duruyor):\n{cikti}")
+        return False
+    print("✓ Yayınlandı → site birkaç dakika içinde güncellenir.")
+    return True
 
-    gomulecek = {k: v for k, v in m.items() if k != "by_id"}
-    html = (SABLON
-            .replace("__MUFREDAT_JSON__", json_gom(gomulecek))
-            .replace("__STATE_JSON__", json_gom(d))
-            .replace("__URETIM__", dt.datetime.now().astimezone().isoformat(timespec="seconds")))
-    hedef = pathlib.Path(args.cikti) if args.cikti else HTML_YOLU
-    hedef.write_text(html, encoding="utf-8")
-    print(f"Yazıldı: {hedef}  (tarayıcıda aç; değişiklikleri 'durum.json indir' ile depoya taşı)")
+
+def belki_yayinla(m, d, args, mesaj):
+    if getattr(args, "yayinla", False):
+        yayinla(m, d, mesaj)
+
+
+def cmd_yayinla(m, d, args):
+    mesaj = args.mesaj or f"defter: {dt.date.today().isoformat()} güncelleme"
+    yayinla(m, d, mesaj)
+
+
+def cmd_bugun(m, d, _args):
+    bugun = dt.date.today()
+    print(f"\n📌 {bugun.isoformat()} — bugün ne yapmalıyım?\n")
+
+    it = sonraki_madde(m, d)
+    if it is None:
+        print("Tüm çekirdek maddeler eşiği geçti. 🎉 Kalanlar seçmeli.\n")
+    else:
+        adlar = basamak_adlari(m, it)
+        sev = d["items"].get(it["id"], 0)
+        hedef = gecis_esigi(it)
+        print(f"  SIRADAKİ  [{it['id']}] {it['lbl']}")
+        print(f"            şu an: {adlar[sev]}  →  hedef: {adlar[hedef]}")
+        if it.get("hint"):
+            print(f"            ipucu: {it['hint']}")
+        sayfa = faz_sayfasi(it["p"])
+        print(f"            plan:  {sayfa}")
+        print(f"            işle:  python3 defter.py seviye {it['id']} {sev + 1} -y")
+
+    hedef_saat = 9.0
+    bu = bu_hafta_saat(d)
+    kalan_gun = 7 - bugun.weekday()
+    print(f"\n  BU HAFTA  {bu:g} / {hedef_saat:g} sa"
+          f"  ({'hedef doldu ✓' if bu >= hedef_saat else f'{hedef_saat - bu:g} sa kaldı, {kalan_gun} gün var'})")
+
+    son = max((e["date"] for e in d["journal"]), default=None)
+    if son:
+        try:
+            fark = (bugun - dt.date.fromisoformat(son)).days
+            if fark == 0:
+                print("  SON SEANS bugün ✓")
+            elif fark == 1:
+                print("  SON SEANS dün")
+            else:
+                print(f"  SON SEANS {fark} gün önce ({son})"
+                      + ("  — girişi küçült: 30 dk'lık bir blok yeter." if fark >= 7 else ""))
+        except ValueError:
+            pass
+    else:
+        print("  SON SEANS yok — ilk seansı bugün aç.")
+
+    acik = [e for e in d["journal"] if e.get("anlamadim")]
+    if acik:
+        print("\n  AÇIK SORULAR (son 3):")
+        for e in sorted(acik, key=lambda x: x["date"])[-3:]:
+            print(f"    · {e['anlamadim']}  ({e['date']})")
+    print()
+
+
+def cmd_rapor(m, d, args):
+    hafta = args.hafta or 8
+    print(f"\n📊 Haftalık rapor — {dt.date.today().isoformat()}\n")
+    print(f"Çekirdek ilerleme: %{genel_yuzde(m, d)}   "
+          f"Toplam: {toplam_saat(d):g} sa / {len(d['journal'])} seans\n")
+
+    seri = hafta_saatleri(d, hafta)
+    en_cok = max((s for _, s in seri), default=0) or 1
+    print(f"Son {hafta} hafta:")
+    for hb, sa in seri:
+        dolu = round(24 * sa / en_cok)
+        isaret = "◀ bu hafta" if hb == hafta_baslangici() else ""
+        print(f"  {hb.isoformat()}  {'█' * dolu}{'·' * (24 - dolu)} {sa:>5.1f} sa {isaret}")
+
+    calisilan = [sa for _, sa in seri if sa > 0]
+    if calisilan:
+        print(f"\n  Çalışılan hafta ortalaması: {sum(calisilan) / len(calisilan):.1f} sa "
+              f"({len(calisilan)}/{hafta} hafta aktif)")
+
+    gunler = {}
+    for e in d["journal"]:
+        try:
+            g = dt.date.fromisoformat(e["date"])
+        except ValueError:
+            continue
+        gunler[g.weekday()] = gunler.get(g.weekday(), 0) + e["hours"]
+    if gunler:
+        adlar = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"]
+        en_iyi = max(gunler.items(), key=lambda kv: kv[1])
+        print(f"  En verimli gün: {adlar[en_iyi[0]]} (toplam {en_iyi[1]:g} sa)")
+
+    print("\nFaz durumu:")
+    for p in m["phases"]:
+        pct = faz_yuzdesi(m, d, p["id"])
+        kapi = kapi_durumu(m, d, p["id"])
+        cekirdek = [i for i in faz_maddeleri(m, p["id"]) if i.get("core")]
+        eksik = [i for i in cekirdek if d["items"].get(i["id"], 0) < gecis_esigi(i)]
+        ek = f"kapıya {len(eksik)} madde" if eksik and pct > 0 else ""
+        print(f"  {p['tag']:<6} {cubuk(pct)} %{pct:<4} {kapi:<10} {ek}")
+
+    ogrenilen = [e for e in d["journal"] if e.get("ogrendim")]
+    if ogrenilen:
+        print("\nSon öğrendiklerin:")
+        for e in sorted(ogrenilen, key=lambda x: x["date"])[-5:]:
+            print(f"  · {e['ogrendim']}  ({e['date']})")
+    print()
 
 
 def cmd_ice_aktar(m, d, args):
@@ -293,6 +469,10 @@ def main():
     alt = ap.add_subparsers(dest="komut")
 
     alt.add_parser("durum", help="terminal panosu")
+    alt.add_parser("bugun", help="sıradaki iş + haftalık durum + açık sorular")
+
+    p = alt.add_parser("rapor", help="haftalık retro raporu")
+    p.add_argument("--hafta", type=int, default=8, help="kaç hafta geriye (varsayılan 8)")
 
     p = alt.add_parser("liste", help="madde kimlikleri")
     p.add_argument("faz", nargs="?", help="yalnızca bu faz (z, f0..f5)")
@@ -300,6 +480,7 @@ def main():
     p = alt.add_parser("seviye", help="ustalık basamağı ata")
     p.add_argument("madde")
     p.add_argument("basamak", type=int)
+    p.add_argument("-y", "--yayinla", action="store_true", help="kaydet + commit + push")
 
     p = alt.add_parser("seans", help="seans günlüğüne kayıt ekle")
     p.add_argument("--saat", type=float, default=0)
@@ -309,9 +490,10 @@ def main():
     p.add_argument("--ogrendim", default="")
     p.add_argument("--anlamadim", default="")
     p.add_argument("--yarin", default="")
+    p.add_argument("-y", "--yayinla", action="store_true", help="kaydet + commit + push")
 
-    p = alt.add_parser("html", help="defter.html üret")
-    p.add_argument("-o", "--cikti", default="")
+    p = alt.add_parser("yayinla", help="durum.json commit + push")
+    p.add_argument("-m", "--mesaj", default="")
 
     p = alt.add_parser("ice-aktar", help="dış yedeği durum.json yap")
     p.add_argument("dosya")
@@ -322,491 +504,10 @@ def main():
         return
     m = mufredat_yukle()
     d = durum_yukle(m)
-    {"durum": cmd_durum, "liste": cmd_liste, "seviye": cmd_seviye,
-     "seans": cmd_seans, "html": cmd_html, "ice-aktar": cmd_ice_aktar}[args.komut](m, d, args)
-
-
-# ---------------- HTML şablonu ----------------
-# defter.html tamamen kendi kendine yeter: müfredat + durum gömülüdür,
-# değişiklikler tarayıcıda (localStorage) saklanır ve "durum.json indir"
-# düğmesiyle depoya taşınır. Hiçbir dış servise bağımlılık yoktur.
-
-SABLON = r'''<!doctype html>
-<html lang="tr">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LLM Atölye Defteri</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<style id="appcss">
-  :root {
-    --bg: #f6f9f8; --surface: #ffffff; --surface-2: #eef4f2;
-    --text: #1a2523; --muted: #566762; --line: #dbe5e1;
-    --accent: #1e7d78; --accent-ink: #135b57; --code-bg: #eaf1ef;
-    --warn: #b3591a; --ok: #1e7d78;
-    --fz: #5f6f6a; --f0: #440154; --f1: #414487; --f2: #2a788e;
-    --f3: #22a884; --f4: #7ad151; --f5: #e3ce1f;
-    --badge-ink-dark: #1a2418;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #0f1715; --surface: #17211e; --surface-2: #1d2926;
-      --text: #e5edea; --muted: #97a8a2; --line: #26332f;
-      --accent: #4cc0a9; --accent-ink: #6fd3bf; --code-bg: #1d2926;
-      --warn: #e08b4a; --ok: #4cc0a9; --f5: #fde725;
-      --f0: #8a4ba0; --f1: #6674cc;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #0f1715; --surface: #17211e; --surface-2: #1d2926;
-    --text: #e5edea; --muted: #97a8a2; --line: #26332f;
-    --accent: #4cc0a9; --accent-ink: #6fd3bf; --code-bg: #1d2926;
-    --warn: #e08b4a; --ok: #4cc0a9; --f5: #fde725;
-    --f0: #8a4ba0; --f1: #6674cc;
-  }
-  * { box-sizing: border-box; }
-  body {
-    background: var(--bg); color: var(--text); margin: 0;
-    font-family: "Source Serif 4", Georgia, serif;
-    font-size: 1rem; line-height: 1.55;
-  }
-  .wrap { max-width: 47rem; margin: 0 auto; padding: 2rem 1.1rem 7rem; }
-  h1, h2, h3 { font-family: "Bricolage Grotesque", "Helvetica Neue", sans-serif; line-height: 1.15; text-wrap: balance; }
-  h1 { font-size: clamp(1.7rem, 5vw, 2.4rem); font-weight: 800; margin: 0.3rem 0 0.4rem; }
-  h2 { font-size: 1.25rem; font-weight: 700; margin: 2.2rem 0 0.7rem; }
-  a { color: var(--accent); }
-  .kicker { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
-  .lede { color: var(--muted); margin-top: 0.2rem; font-size: 0.98rem; }
-  code, .mono { font-family: "IBM Plex Mono", monospace; font-size: 0.85em; background: var(--code-bg); border-radius: 4px; padding: 0.06em 0.3em; }
-  .dash { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 0.6rem; margin: 1.2rem 0; }
-  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0.7rem 0.9rem; }
-  .stat .v { font-family: "IBM Plex Mono", monospace; font-size: 1.35rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .stat .l { font-size: 0.78rem; color: var(--muted); }
-  .stat .sub { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; color: var(--muted); }
-  .allbars { display: flex; gap: 0.35rem; margin: 0.4rem 0 0.2rem; }
-  .allbars .pb { flex: 1; height: 0.55rem; border-radius: 4px; background: var(--surface-2); overflow: hidden; position: relative; }
-  .allbars .pb i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; }
-  .pcard { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--pc); border-radius: 0 12px 12px 0; margin: 1rem 0; overflow: hidden; }
-  .phead { display: flex; align-items: center; gap: 0.7rem; padding: 0.8rem 1rem; cursor: pointer; user-select: none; }
-  .phead:hover { background: var(--surface-2); }
-  .phead .tag { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; padding: 0.15em 0.6em; border-radius: 999px; background: var(--pc); color: #fff; flex-shrink: 0; }
-  .phead .tag.inkdark { color: var(--badge-ink-dark); }
-  .phead .nm { font-family: "Bricolage Grotesque", sans-serif; font-weight: 650; font-size: 1.02rem; flex: 1; min-width: 8rem; }
-  .gate { font-family: "IBM Plex Mono", monospace; font-size: 0.66rem; padding: 0.2em 0.6em; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
-  .gate.on { border-color: var(--ok); color: var(--ok); font-weight: 600; }
-  .gate.run { border-color: var(--warn); color: var(--warn); }
-  .ppct { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .chev { color: var(--muted); font-size: 0.8rem; }
-  .open .chev { transform: rotate(90deg); }
-  .pbody { display: none; border-top: 1px solid var(--line); }
-  .open .pbody { display: block; }
-  .item { padding: 0.7rem 1rem; border-bottom: 1px solid var(--line); }
-  .item:last-child { border-bottom: none; }
-  .item .row { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
-  .item .lbl { flex: 1; min-width: 12rem; font-size: 0.95rem; }
-  .item .core { font-family: "IBM Plex Mono", monospace; font-size: 0.62rem; color: var(--muted); border: 1px dashed var(--line); border-radius: 4px; padding: 0 0.3em; vertical-align: middle; }
-  .item .hint { font-size: 0.82rem; color: var(--muted); margin: 0.15rem 0 0.3rem; }
-  .lvls { display: flex; gap: 0.25rem; align-items: center; }
-  .lvls button {
-    font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; font-weight: 600;
-    width: 1.75rem; height: 1.55rem; border-radius: 5px; border: 1px solid var(--line);
-    background: var(--surface-2); color: var(--muted); cursor: pointer; padding: 0;
-  }
-  .lvls button:hover { border-color: var(--pc); }
-  .lvls button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .lvls button.hit { background: var(--pc); border-color: var(--pc); color: #fff; }
-  .lvls button.hit.inkdark { color: var(--badge-ink-dark); }
-  .lvlname { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; color: var(--muted); margin-top: 0.25rem; }
-  .jform { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; }
-  .jgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 0.6rem; margin-bottom: 0.6rem; }
-  .jform label { display: block; font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.2rem; }
-  .jform input, .jform select, .jform textarea {
-    width: 100%; border: 1px solid var(--line); border-radius: 7px; background: var(--bg);
-    color: var(--text); font-family: "Source Serif 4", Georgia, serif; font-size: 0.92rem;
-    padding: 0.45rem 0.6rem;
-  }
-  .jform textarea { min-height: 2.6rem; resize: vertical; }
-  .jform input:focus, .jform select:focus, .jform textarea:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
-  .btn {
-    font-family: "Bricolage Grotesque", sans-serif; font-weight: 650; font-size: 0.9rem;
-    background: var(--accent); color: var(--bg); border: none; border-radius: 8px;
-    padding: 0.5rem 1.1rem; cursor: pointer;
-  }
-  .btn:hover { background: var(--accent-ink); }
-  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .jentry { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0.7rem 0.95rem; margin: 0.6rem 0; }
-  .jentry .top { display: flex; gap: 0.7rem; align-items: baseline; flex-wrap: wrap; }
-  .jentry .d { font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; font-weight: 600; }
-  .jentry .h { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; color: var(--muted); }
-  .jentry .del { margin-left: auto; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.85rem; }
-  .jentry .del:hover { color: var(--warn); }
-  .jentry dl { margin: 0.3rem 0 0; }
-  .jentry dt { font-family: "IBM Plex Mono", monospace; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-top: 0.3rem; }
-  .jentry dd { margin: 0; font-size: 0.92rem; }
-  .savebar {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
-    background: var(--surface); border-top: 1px solid var(--line);
-    padding: 0.6rem 1rem; display: none; align-items: center; gap: 0.8rem; justify-content: center; flex-wrap: wrap;
-  }
-  .savebar.show { display: flex; }
-  .savebar .msg { font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--warn); }
-  .banner { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 0.6rem 0.9rem; font-size: 0.88rem; color: var(--muted); margin: 0.8rem 0; }
-  .legend { font-size: 0.85rem; color: var(--muted); }
-  .foot { color: var(--muted); font-size: 0.8rem; border-top: 1px solid var(--line); margin-top: 2.5rem; padding-top: 1rem; font-family: "IBM Plex Mono", monospace; }
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
-</style>
-</head>
-<body>
-<div id="app" class="wrap"><noscript>Bu defter JavaScript ister.</noscript></div>
-<script type="application/json" id="mufredat">__MUFREDAT_JSON__</script>
-<script type="application/json" id="state">__STATE_JSON__</script>
-<script id="appjs">
-(async function () {
-  'use strict';
-  var LS_KEY = 'llm-atolye-defteri-v1';
-  var MUF = JSON.parse(document.getElementById('mufredat').textContent);
-  var ITEMS = MUF.items, PHASES = MUF.phases, LEVELS = MUF.levels;
-  var ITEM_BY_ID = {};
-  ITEMS.forEach(function (i) { ITEM_BY_ID[i.id] = i; });
-
-  function itemMax(it) { return it.max != null ? it.max : (it.t === 'yap' ? 4 : 2); }
-  function passLevel(it) { return Math.min(it.t === 'yap' ? 3 : 2, itemMax(it)); }
-  function levelNames(it) { return LEVELS[it.t].slice(0, itemMax(it) + 1); }
-
-  function defaultState() { return { v: 1, items: {}, journal: [], updated: null }; }
-  function normalizeState(s) {
-    if (!s || typeof s !== 'object') return null;
-    var out = defaultState();
-    out.updated = (typeof s.updated === 'string') ? s.updated : null;
-    if (s.items && typeof s.items === 'object') {
-      Object.keys(s.items).forEach(function (k) {
-        var it = ITEM_BY_ID[k]; if (!it) return;
-        var v = parseInt(s.items[k], 10);
-        if (isNaN(v) || v <= 0) return;
-        out.items[k] = Math.min(v, itemMax(it));
-      });
-    }
-    if (Array.isArray(s.journal)) {
-      s.journal.forEach(function (e) {
-        if (!e || typeof e !== 'object') return;
-        if (typeof e.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(e.date)) return;
-        out.journal.push({
-          id: String(e.id || 'j' + Math.random().toString(36).slice(2)),
-          date: e.date,
-          hours: (+e.hours > 0) ? +e.hours : 0,
-          phase: typeof e.phase === 'string' ? e.phase : 'z',
-          yaptim: String(e.yaptim || ''), ogrendim: String(e.ogrendim || ''),
-          anlamadim: String(e.anlamadim || ''), yarin: String(e.yarin || '')
-        });
-      });
-    }
-    return out;
-  }
-
-  var embedded = null;
-  try { embedded = normalizeState(JSON.parse(document.getElementById('state').textContent)); } catch (e) { embedded = null; }
-  /* sunucudan (GitHub Pages / yerel serve) açıldıysa depodaki en taze durum.json'u çek;
-     dosyadan (file://) açıldıysa gömülü anlık görüntüyle yetin */
-  var fetched = null;
-  try {
-    var resp = await fetch('durum.json?t=' + Date.now(), { cache: 'no-store' });
-    if (resp.ok) fetched = normalizeState(await resp.json());
-  } catch (e) { fetched = null; }
-  var repoState = fetched || embedded || defaultState();
-  var REPO_JSON = JSON.stringify(repoState);
-  var state = repoState;
-  var localWasNewer = false;
-  try {
-    var rawLoc = localStorage.getItem(LS_KEY);
-    if (rawLoc) {
-      var loc = normalizeState(JSON.parse(rawLoc));
-      if (loc && loc.updated && (!state.updated || loc.updated > state.updated) && JSON.stringify(loc) !== REPO_JSON) {
-        state = loc; localWasNewer = true;
-      }
-    }
-  } catch (e) { /* localStorage yoksa depo hâliyle devam */ }
-
-  var storageBroken = false;
-  function saveLocal() {
-    state.updated = new Date().toISOString();
-    try { localStorage.setItem(LS_KEY, JSON.stringify(state)); storageBroken = false; }
-    catch (e) { storageBroken = true; }
-  }
-  function isDirty() { return JSON.stringify(state) !== REPO_JSON; }
-  function downloadState() {
-    var blob = new Blob([JSON.stringify(state, null, 1) + '\n'], { type: 'application/json' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url; a.download = 'durum.json';
-    document.body.appendChild(a); a.click();
-    setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 500);
-  }
-
-  function todayLocal() {
-    var d = new Date();
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  }
-  function isoWeekKey(dstr) {
-    var d = new Date(dstr + 'T12:00:00');
-    if (isNaN(d.getTime())) return '';
-    var day = (d.getDay() + 6) % 7; d.setDate(d.getDate() - day);
-    return d.toISOString().slice(0, 10);
-  }
-  function lvl(id) { return state.items[id] || 0; }
-  function phaseItems(pid) { return ITEMS.filter(function (i) { return i.p === pid; }); }
-  function phasePct(pid) {
-    var its = phaseItems(pid); if (!its.length) return 0;
-    var s = 0; its.forEach(function (i) { s += lvl(i.id) / itemMax(i); });
-    return Math.round(100 * s / its.length);
-  }
-  function gateStatus(pid) {
-    var core = phaseItems(pid).filter(function (i) { return i.core; });
-    var allPass = core.every(function (i) { return lvl(i.id) >= passLevel(i); });
-    var oneMax = core.some(function (i) { return lvl(i.id) >= itemMax(i); });
-    if (allPass && oneMax) return 'on';
-    return phaseItems(pid).some(function (i) { return lvl(i.id) > 0; }) ? 'run' : 'off';
-  }
-  function overallPct() {
-    var core = ITEMS.filter(function (i) { return i.core; });
-    var s = 0; core.forEach(function (i) { s += lvl(i.id) / itemMax(i); });
-    return Math.round(100 * s / core.length);
-  }
-  function hoursThisWeek() {
-    var wk = isoWeekKey(todayLocal()), s = 0;
-    if (!wk) return 0;
-    state.journal.forEach(function (e) { if (isoWeekKey(e.date) === wk) s += (+e.hours || 0); });
-    return s;
-  }
-  function totalHours() {
-    var s = 0; state.journal.forEach(function (e) { s += (+e.hours || 0); });
-    return s;
-  }
-  function esc(x) { return String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-
-  var app = document.getElementById('app');
-  var openPhases = {};
-  PHASES.forEach(function (p) { if (gateStatus(p.id) === 'run') openPhases[p.id] = true; });
-  if (!Object.keys(openPhases).length) openPhases.z = true;
-
-  function el(tag, cls, html) {
-    var n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (html != null) n.innerHTML = html;
-    return n;
-  }
-
-  function emptyDraft() { return { date: '', hours: '', phase: 'z', j1: '', j2: '', j3: '', j4: '' }; }
-  var draft = emptyDraft();
-
-  function render() {
-    app.innerHTML = '';
-    var nav = el('p', 'kicker', '<a href="index.html">← atölye</a> · <a href="harita.html">harita</a> · seans defteri');
-    nav.querySelectorAll('a').forEach(function (a) { a.style.color = 'inherit'; a.style.textDecoration = 'none'; });
-    app.appendChild(nav);
-    app.appendChild(el('h1', null, 'LLM Atölye Defteri'));
-    app.appendChild(el('p', 'lede', 'Veri kaynağı depodaki <code>durum.json</code> — sunucudan açıldıysa sayfa en taze hâlini kendisi çeker. Değişikliklerin tarayıcıda saklanır; depoya taşımak için alttaki "durum.json indir" düğmesini kullan, dosyayı değiştirip commit’le.'));
-
-    if (localWasNewer) app.appendChild(el('div', 'banner', 'Tarayıcıda depodakinden daha yeni kayıt bulundu ve yüklendi. Depoya işlemek için "durum.json indir" → dosyayı değiştir.'));
-    if (storageBroken) app.appendChild(el('div', 'banner', 'Uyarı: tarayıcı depolaması çalışmıyor — sekmeyi kapatmadan önce mutlaka "durum.json indir".'));
-
-    var dash = el('div', 'dash');
-    var wh = hoursThisWeek();
-    dash.appendChild(statBox(overallPct() + '%', 'çekirdek ilerleme', ''));
-    dash.appendChild(statBox(wh.toFixed(1).replace('.0', '') + ' sa', 'bu hafta', 'hedef 8–10 sa'));
-    dash.appendChild(statBox(totalHours().toFixed(1).replace('.0', '') + ' sa', 'toplam', state.journal.length + ' seans'));
-    var last = state.journal.length ? state.journal.map(function (e) { return e.date; }).sort().pop() : null;
-    dash.appendChild(statBox(last ? last.slice(5) : '—', 'son seans', last ? '' : 'henüz kayıt yok'));
-    app.appendChild(dash);
-
-    var bars = el('div', 'allbars');
-    PHASES.forEach(function (p) {
-      var b = el('div', 'pb'); b.title = p.name + ' — %' + phasePct(p.id);
-      var i = el('i'); i.style.background = p.color; i.style.width = phasePct(p.id) + '%';
-      b.appendChild(i); bars.appendChild(b);
-    });
-    app.appendChild(bars);
-
-    app.appendChild(el('p', 'legend', 'Merdiven — yap-maddeleri: <span class="mono">0 başlamadım · 1 bütünü gördüm · 2 kapalı kitap yazdım · 3 egzersiz/test yeşil · 4 Türkçe büküm + defter</span>; oku-maddeleri: <span class="mono">0 · 1 okudum · 2 deftere özetledim</span>. Kapı kuralı: çekirdek (Ç) maddelerin tümü ≥ 3 (oku: ≥ 2) ve en az biri tavanda. Aynı basamağa ikinci kez tıklamak bir basamak geri alır.'));
-
-    PHASES.forEach(function (p) { app.appendChild(phaseCard(p)); });
-
-    app.appendChild(el('h2', null, 'Seans günlüğü'));
-    app.appendChild(journalForm());
-    var list = el('div');
-    state.journal.slice().sort(function (a, b) {
-      if (a.date === b.date) return a.id === b.id ? 0 : (a.id < b.id ? 1 : -1);
-      return a.date < b.date ? 1 : -1;
-    }).forEach(function (e) { list.appendChild(journalEntry(e)); });
-    app.appendChild(list);
-
-    app.appendChild(el('p', 'foot', 'Üretim: __URETIM__ · kaynak: durum.json + mufredat.json · üretici: defter.py'));
-    renderSavebar();
-  }
-
-  function statBox(v, l, sub) {
-    var s = el('div', 'stat');
-    s.appendChild(el('div', 'v', esc(v)));
-    s.appendChild(el('div', 'l', esc(l)));
-    if (sub) s.appendChild(el('div', 'sub', esc(sub)));
-    return s;
-  }
-
-  function phaseCard(p) {
-    var card = el('div', 'pcard' + (openPhases[p.id] ? ' open' : ''));
-    card.style.setProperty('--pc', p.color);
-    var head = el('div', 'phead');
-    head.appendChild(el('span', 'tag' + (p.dark ? ' inkdark' : ''), esc(p.tag)));
-    head.appendChild(el('span', 'nm', esc(p.name)));
-    var g = gateStatus(p.id);
-    head.appendChild(el('span', 'gate' + (g === 'on' ? ' on' : g === 'run' ? ' run' : ''),
-      g === 'on' ? 'KAPI GEÇİLDİ' : g === 'run' ? 'sürüyor' : 'başlamadı'));
-    head.appendChild(el('span', 'ppct', '%' + phasePct(p.id)));
-    head.appendChild(el('span', 'chev', '▶'));
-    head.addEventListener('click', function () {
-      openPhases[p.id] = !openPhases[p.id]; render();
-    });
-    card.appendChild(head);
-
-    var body = el('div', 'pbody');
-    phaseItems(p.id).forEach(function (it) {
-      var row = el('div', 'item');
-      var r1 = el('div', 'row');
-      r1.appendChild(el('span', 'lbl', esc(it.lbl) + (it.core ? ' <span class="core">Ç</span>' : '')));
-      var lv = el('div', 'lvls');
-      var names = levelNames(it);
-      for (var n = 0; n <= itemMax(it); n++) {
-        (function (n) {
-          var b = document.createElement('button');
-          b.textContent = n;
-          b.title = names[n];
-          b.setAttribute('aria-label', it.lbl + ': ' + names[n]);
-          if (lvl(it.id) >= n && n > 0) b.className = 'hit' + (p.dark ? ' inkdark' : '');
-          b.addEventListener('click', function () {
-            var cur = lvl(it.id);
-            var next = (cur === n) ? Math.max(0, n - 1) : n;
-            if (next === cur) return;
-            if (next === 0) delete state.items[it.id]; else state.items[it.id] = next;
-            saveLocal(); render();
-          });
-          lv.appendChild(b);
-        })(n);
-      }
-      r1.appendChild(lv);
-      row.appendChild(r1);
-      if (it.hint) row.appendChild(el('div', 'hint', esc(it.hint)));
-      row.appendChild(el('div', 'lvlname', esc(names[lvl(it.id)])));
-      body.appendChild(row);
-    });
-    card.appendChild(body);
-    return card;
-  }
-
-  function journalForm() {
-    var f = el('div', 'jform');
-    var g = el('div', 'jgrid');
-    g.innerHTML =
-      '<div><label for="jd">Tarih</label><input id="jd" type="date"></div>' +
-      '<div><label for="jh">Saat</label><input id="jh" type="number" min="0" step="0.5" placeholder="2.5"></div>' +
-      '<div><label for="jp">Faz</label><select id="jp">' +
-      PHASES.map(function (p) { return '<option value="' + p.id + '">' + esc(p.tag + ' — ' + p.name) + '</option>'; }).join('') +
-      '</select></div>';
-    f.appendChild(g);
-    var g2 = el('div', 'jgrid');
-    g2.innerHTML =
-      '<div><label for="j1">Ne yaptım</label><textarea id="j1"></textarea></div>' +
-      '<div><label for="j2">Ne öğrendim</label><textarea id="j2"></textarea></div>' +
-      '<div><label for="j3">Neyi anlamadım</label><textarea id="j3"></textarea></div>' +
-      '<div><label for="j4">Yarın ilk iş</label><textarea id="j4"></textarea></div>';
-    f.appendChild(g2);
-
-    f.querySelector('#jd').value = draft.date || todayLocal();
-    f.querySelector('#jh').value = draft.hours;
-    f.querySelector('#jp').value = draft.phase;
-    f.querySelector('#j1').value = draft.j1;
-    f.querySelector('#j2').value = draft.j2;
-    f.querySelector('#j3').value = draft.j3;
-    f.querySelector('#j4').value = draft.j4;
-    function syncDraft() {
-      draft.date = f.querySelector('#jd').value;
-      draft.hours = f.querySelector('#jh').value;
-      draft.phase = f.querySelector('#jp').value;
-      draft.j1 = f.querySelector('#j1').value;
-      draft.j2 = f.querySelector('#j2').value;
-      draft.j3 = f.querySelector('#j3').value;
-      draft.j4 = f.querySelector('#j4').value;
-    }
-    f.addEventListener('input', syncDraft);
-    f.addEventListener('change', syncDraft);
-
-    var btn = el('button', 'btn', 'Seansı kaydet');
-    var jmsg = el('span', 'h', '');
-    jmsg.style.marginLeft = '0.7rem';
-    jmsg.style.fontFamily = '"IBM Plex Mono", monospace';
-    jmsg.style.fontSize = '0.72rem';
-    btn.addEventListener('click', function () {
-      var entry = {
-        id: 'j' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-        date: f.querySelector('#jd').value || todayLocal(),
-        hours: parseFloat(f.querySelector('#jh').value) || 0,
-        phase: f.querySelector('#jp').value,
-        yaptim: f.querySelector('#j1').value.trim(),
-        ogrendim: f.querySelector('#j2').value.trim(),
-        anlamadim: f.querySelector('#j3').value.trim(),
-        yarin: f.querySelector('#j4').value.trim()
-      };
-      if (!entry.yaptim && !entry.hours) {
-        jmsg.textContent = 'En azından "ne yaptım" ya da saat gir.';
-        return;
-      }
-      state.journal.push(entry);
-      draft = emptyDraft();
-      saveLocal(); render();
-    });
-    f.appendChild(btn);
-    f.appendChild(jmsg);
-    return f;
-  }
-
-  function journalEntry(e) {
-    var d = el('div', 'jentry');
-    var ph = PHASES.filter(function (p) { return p.id === e.phase; })[0];
-    var top = el('div', 'top');
-    top.appendChild(el('span', 'd', esc(e.date)));
-    top.appendChild(el('span', 'h', esc((e.hours || 0) + ' sa · ' + (ph ? ph.tag : ''))));
-    var del = el('button', 'del', '✕');
-    del.title = 'Seansı sil';
-    del.addEventListener('click', function () {
-      state.journal = state.journal.filter(function (x) { return x.id !== e.id; });
-      saveLocal(); render();
-    });
-    top.appendChild(del);
-    d.appendChild(top);
-    var dl = el('dl');
-    [['Yaptım', e.yaptim], ['Öğrendim', e.ogrendim], ['Anlamadım', e.anlamadim], ['Yarın', e.yarin]].forEach(function (pair) {
-      if (pair[1]) { dl.appendChild(el('dt', null, pair[0])); dl.appendChild(el('dd', null, esc(pair[1]))); }
-    });
-    d.appendChild(dl);
-    return d;
-  }
-
-  var savebar = el('div', 'savebar');
-  document.body.appendChild(savebar);
-  function renderSavebar() {
-    savebar.innerHTML = '';
-    if (!isDirty()) { savebar.className = 'savebar'; return; }
-    savebar.className = 'savebar show';
-    savebar.appendChild(el('span', 'msg', 'Sayfa üretiminden bu yana değişiklik var — depoya işle:'));
-    var b = el('button', 'btn', 'durum.json indir');
-    b.addEventListener('click', function () { downloadState(); });
-    savebar.appendChild(b);
-  }
-
-  render();
-})();
-</script>
-</body>
-</html>
-'''
+    {"durum": cmd_durum, "bugun": cmd_bugun, "rapor": cmd_rapor,
+     "liste": cmd_liste, "seviye": cmd_seviye, "seans": cmd_seans,
+     "yayinla": cmd_yayinla,
+     "ice-aktar": cmd_ice_aktar}[args.komut](m, d, args)
 
 if __name__ == "__main__":
     main()

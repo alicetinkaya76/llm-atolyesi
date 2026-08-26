@@ -1,0 +1,36 @@
+#!/bin/sh
+# LLM Atölyesi — her yerden çalışan kısayol.
+# Kurulum (bir kez):
+#   ln -sf ~/Desktop/llm-atolyesi/atolye /usr/local/bin/atolye
+# Kullanım:
+#   atolye                 → bugün ne yapmalıyım
+#   atolye durum | rapor | liste f0
+#   atolye seviye f0a 3 -y
+#   atolye seans --saat 2.5 --faz f0 --yaptim "..." -y
+#   atolye ac              → siteyi tarayıcıda aç
+#   atolye site            → yerel sunucu (localhost:8933)
+set -eu
+
+KOK="$(cd "$(dirname "$(readlink "$0" 2>/dev/null || echo "$0")")" && pwd)"
+DEFTER="$KOK/defter.py"
+
+[ -f "$DEFTER" ] || { echo "defter.py bulunamadı: $DEFTER" >&2; exit 1; }
+
+# argümansız çağrı → bugün panosu
+[ $# -eq 0 ] && set -- bugun
+
+case "$1" in
+  ac)
+    open "https://alicetinkaya76.github.io/llm-atolyesi/"
+    ;;
+  site)
+    echo "Yerel atölye: http://localhost:8933  (durdurmak için Ctrl-C)"
+    exec node "$KOK/serve.mjs"
+    ;;
+  yerel)
+    open "file://$KOK/index.html"
+    ;;
+  *)
+    exec python3 "$DEFTER" "$@"
+    ;;
+esac

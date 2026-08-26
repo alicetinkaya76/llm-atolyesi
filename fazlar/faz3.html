@@ -2,6 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.github.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Faz 3 — CS336 Omurgası</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -22,31 +23,31 @@
   <div class="hafta">
     <h3>Blok 1 — A1: her şey sıfırdan <span class="sure">· 3–4 hafta · Mac yeter</span></h3>
     <ul class="plain">
-      <li><span class="madde">f3a</span> <a href="https://github.com/stanford-cs336/assignment1-basics">assignment1-basics</a>: BPE tokenizer + transformer + optimizer + eğitim, hepsi sıfırdan, scaffolding yok. Faz 0–1'i ciddi yaptıysan zorlu ama yapılabilir. Test süiti yeşil = L3. İlgili ders videolarını ödevle eş zamanlı izle, önden değil.</li>
+      <li><a class="madde" id="f3a" href="../defter.html#f3a" title="Defterde işaretle: f3a">f3a</a> <a href="https://github.com/stanford-cs336/assignment1-basics">assignment1-basics</a>: BPE tokenizer + transformer + optimizer + eğitim, hepsi sıfırdan, scaffolding yok. Faz 0–1'i ciddi yaptıysan zorlu ama yapılabilir. Test süiti yeşil = L3. İlgili ders videolarını ödevle eş zamanlı izle, önden değil.</li>
     </ul>
   </div>
 
   <div class="hafta">
     <h3>Blok 2 — A4 + veri zanaatı <span class="sure">· 2–3 hafta</span></h3>
     <ul class="plain">
-      <li><span class="madde">f3d</span> A4 (data): Common Crawl'dan eğitim verisi damıtma. Kendi kural setinle karşılaştır: DH korpuslarında neyi elle yapıyordun, burada ne otomatikleşiyor?</li>
-      <li><span class="madde">f3f</span> <a href="https://github.com/huggingface/datatrove">datatrove</a> + <a href="https://arxiv.org/abs/2406.17557">FineWeb raporu</a>: FineWeb'i kuran kütüphane ve yöntem makalesi. Uygulama: FineWeb-2 tr'den 1B token'lık deneme slice'ı çek, MinHash dedup'la, önce/sonra istatistiklerini raporla. Bu betik Faz 5'te büyütülerek yeniden kullanılacak.</li>
+      <li><a class="madde" id="f3d" href="../defter.html#f3d" title="Defterde işaretle: f3d">f3d</a> A4 (data): Common Crawl'dan eğitim verisi damıtma. Kendi kural setinle karşılaştır: DH korpuslarında neyi elle yapıyordun, burada ne otomatikleşiyor?</li>
+      <li><a class="madde" id="f3f" href="../defter.html#f3f" title="Defterde işaretle: f3f">f3f</a> <a href="https://github.com/huggingface/datatrove">datatrove</a> + <a href="https://arxiv.org/abs/2406.17557">FineWeb raporu</a>: FineWeb'i kuran kütüphane ve yöntem makalesi. Uygulama: FineWeb-2 tr'den 1B token'lık deneme slice'ı çek, MinHash dedup'la, önce/sonra istatistiklerini raporla. Bu betik Faz 5'te büyütülerek yeniden kullanılacak.</li>
     </ul>
   </div>
 
   <div class="hafta">
     <h3>Blok 3 — Seçmeli derinlik <span class="sure">· A2/A3/A5 · bulut $50–300</span></h3>
     <ul class="plain">
-      <li><span class="madde">f3b</span> A2 (systems): Triton'da FlashAttention2 + elle DDP. <strong>NVIDIA ister</strong> — MPS çalışmaz; RunPod'da 4090 ($0.34/sa) yeter. Capstone için şart değil; "kernel ne yapıyor" sezgisi için değerli.</li>
-      <li><span class="madde">f3c</span> A3 (scaling): ölçekleme yasası fit etme — Faz 2'deki üçlemenin uygulaması.</li>
-      <li><span class="madde">f3e</span> A5 (alignment): Faz 4'le birleştir; orada TRL'den önce yapmak öğretici.</li>
+      <li><a class="madde" id="f3b" href="../defter.html#f3b" title="Defterde işaretle: f3b">f3b</a> A2 (systems): Triton'da FlashAttention2 + elle DDP. <strong>NVIDIA ister</strong> — MPS çalışmaz; RunPod'da 4090 ($0.34/sa) yeter. Capstone için şart değil; "kernel ne yapıyor" sezgisi için değerli.</li>
+      <li><a class="madde" id="f3c" href="../defter.html#f3c" title="Defterde işaretle: f3c">f3c</a> A3 (scaling): ölçekleme yasası fit etme — Faz 2'deki üçlemenin uygulaması.</li>
+      <li><a class="madde" id="f3e" href="../defter.html#f3e" title="Defterde işaretle: f3e">f3e</a> A5 (alignment): Faz 4'le birleştir; orada TRL'den önce yapmak öğretici.</li>
     </ul>
   </div>
 
   <div class="hafta">
     <h3>Sürekli — Okuma rafı <span class="sure">· hafif bloklarda</span></h3>
     <ul class="plain">
-      <li><span class="madde">f3g</span> <a href="https://huggingfacetb-smol-training-playbook.hf.space/">Smol Training Playbook</a> (SmolLM3'ün dürüst hikâyesi: ablasyonlar ana koşudan pahalı; "hiç eğitmeli miyim?" karar çerçevesi) → <a href="https://allenai.org/blog/olmo3">OLMo 3</a> (tam şeffaflık: veri+kod+checkpoint+log — senin tekrarlanabilirlik kültürünün endüstri ölçeği) → <a href="https://arxiv.org/abs/2407.21783">Llama 3 Herd</a>. Hız merakına: <a href="https://github.com/KellerJordan/modded-nanogpt">modded-nanogpt</a> rekor tarihi (GPT-2 kalitesi 1.23 dk!) + <a href="https://www.tylerromero.com/posts/nanogpt-speedrun-worklog/">Romero'nun 2×4090 worklog'u</a>.</li>
+      <li><a class="madde" id="f3g" href="../defter.html#f3g" title="Defterde işaretle: f3g">f3g</a> <a href="https://huggingfacetb-smol-training-playbook.hf.space/">Smol Training Playbook</a> (SmolLM3'ün dürüst hikâyesi: ablasyonlar ana koşudan pahalı; "hiç eğitmeli miyim?" karar çerçevesi) → <a href="https://allenai.org/blog/olmo3">OLMo 3</a> (tam şeffaflık: veri+kod+checkpoint+log — senin tekrarlanabilirlik kültürünün endüstri ölçeği) → <a href="https://arxiv.org/abs/2407.21783">Llama 3 Herd</a>. Hız merakına: <a href="https://github.com/KellerJordan/modded-nanogpt">modded-nanogpt</a> rekor tarihi (GPT-2 kalitesi 1.23 dk!) + <a href="https://www.tylerromero.com/posts/nanogpt-speedrun-worklog/">Romero'nun 2×4090 worklog'u</a>.</li>
     </ul>
   </div>
 

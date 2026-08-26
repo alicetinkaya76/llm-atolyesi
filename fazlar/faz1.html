@@ -2,6 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.github.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Faz 1 — Tokenizer ve Türkçe</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -22,25 +23,25 @@
   <div class="hafta">
     <h3>Hafta 1 — BPE'yi sıfırdan kur <span class="sure">· ~8–10 sa</span></h3>
     <ul class="plain">
-      <li><span class="madde">f1a</span> <a href="https://www.youtube.com/watch?v=zduSFxRajkE">"Let's build the GPT Tokenizer"</a> (2s13) + <a href="https://github.com/karpathy/minbpe">minbpe</a> <code>exercise.md</code>: BasicTokenizer → RegexTokenizer → GPT-4 reprodüksiyonu merdivenini uçtan uca çık. Testler yeşilse L3.</li>
+      <li><a class="madde" id="f1a" href="../defter.html#f1a" title="Defterde işaretle: f1a">f1a</a> <a href="https://www.youtube.com/watch?v=zduSFxRajkE">"Let's build the GPT Tokenizer"</a> (2s13) + <a href="https://github.com/karpathy/minbpe">minbpe</a> <code>exercise.md</code>: BasicTokenizer → RegexTokenizer → GPT-4 reprodüksiyonu merdivenini uçtan uca çık. Testler yeşilse L3.</li>
     </ul>
   </div>
 
   <div class="hafta">
     <h3>Hafta 2 — Türkçe deney <span class="sure">· ~8–10 sa</span></h3>
     <ul class="plain">
-      <li><span class="madde">f1b</span> Kendi BPE'ni Alatlı korpusunda eğit (8k / 16k / 32k vocab, üçünü de). Fertility tablosu: token/kelime oranı — kendi tokenizer'ın vs <code>tiktoken</code> (GPT-4) vs <a href="https://huggingface.co/vngrs-ai/Kumru-2B">Kumru-2B</a>'nin tokenizer'ı (HF'den yüklenir). Sayılar koddan üretilsin, tabloya elle yazma.</li>
-      <li><span class="madde">f1c</span> <a href="https://huggingface.co/learn/llm-course/chapter6/1">HF Tokenizers (ch6)</a> + <a href="https://github.com/google/sentencepiece">SentencePiece</a>: aynı korpusta BPE vs <strong>unigram</strong> karşılaştır — morfolojik dillerde unigram genelde daha temiz ek sınırları verir; senin verinde öyle mi?</li>
+      <li><a class="madde" id="f1b" href="../defter.html#f1b" title="Defterde işaretle: f1b">f1b</a> Kendi BPE'ni Alatlı korpusunda eğit (8k / 16k / 32k vocab, üçünü de). Fertility tablosu: token/kelime oranı — kendi tokenizer'ın vs <code>tiktoken</code> (GPT-4) vs <a href="https://huggingface.co/vngrs-ai/Kumru-2B">Kumru-2B</a>'nin tokenizer'ı (HF'den yüklenir). Sayılar koddan üretilsin, tabloya elle yazma.</li>
+      <li><a class="madde" id="f1c" href="../defter.html#f1c" title="Defterde işaretle: f1c">f1c</a> <a href="https://huggingface.co/learn/llm-course/chapter6/1">HF Tokenizers (ch6)</a> + <a href="https://github.com/google/sentencepiece">SentencePiece</a>: aynı korpusta BPE vs <strong>unigram</strong> karşılaştır — morfolojik dillerde unigram genelde daha temiz ek sınırları verir; senin verinde öyle mi?</li>
     </ul>
   </div>
 
   <div class="hafta">
     <h3>Hafta 3 — Literatür + ölçüm <span class="sure">· ~6–8 sa</span></h3>
     <ul class="plain">
-      <li><span class="madde">f1d</span> <a href="https://arxiv.org/abs/2502.07057">%TR ve token saflığı</a>: metrikleri öğren.</li>
-      <li><span class="madde">f1g</span> <a href="https://github.com/obulat/zeyrek">zeyrek</a> ile kendi tokenizer'larının %TR'sini hesapla (token'ların ne kadarı geçerli Türkçe kelime). Fertility tablosuna sütun olarak ekle.</li>
-      <li><span class="madde">f1e</span> <a href="https://arxiv.org/abs/2508.14292">Morfoloji-temelli hibrit tokenizer</a> (kök+ek mimarisi) — okuma; ileri hedef olarak not al.</li>
-      <li><span class="madde">f1f</span> <a href="https://arxiv.org/abs/2602.06942">Altınok 2026</a>: vocab boyutu × tokenizer ailesi taraması — capstone'daki vocab kararını bu makaleyle ver; deftere "benim seçimim ve gerekçesi" notu düş.</li>
+      <li><a class="madde" id="f1d" href="../defter.html#f1d" title="Defterde işaretle: f1d">f1d</a> <a href="https://arxiv.org/abs/2502.07057">%TR ve token saflığı</a>: metrikleri öğren.</li>
+      <li><a class="madde" id="f1g" href="../defter.html#f1g" title="Defterde işaretle: f1g">f1g</a> <a href="https://github.com/obulat/zeyrek">zeyrek</a> ile kendi tokenizer'larının %TR'sini hesapla (token'ların ne kadarı geçerli Türkçe kelime). Fertility tablosuna sütun olarak ekle.</li>
+      <li><a class="madde" id="f1e" href="../defter.html#f1e" title="Defterde işaretle: f1e">f1e</a> <a href="https://arxiv.org/abs/2508.14292">Morfoloji-temelli hibrit tokenizer</a> (kök+ek mimarisi) — okuma; ileri hedef olarak not al.</li>
+      <li><a class="madde" id="f1f" href="../defter.html#f1f" title="Defterde işaretle: f1f">f1f</a> <a href="https://arxiv.org/abs/2602.06942">Altınok 2026</a>: vocab boyutu × tokenizer ailesi taraması — capstone'daki vocab kararını bu makaleyle ver; deftere "benim seçimim ve gerekçesi" notu düş.</li>
     </ul>
   </div>
 

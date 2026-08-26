@@ -38,26 +38,69 @@ eğitim paketi gerekir) ya da site yerelde `node serve.mjs` ile yaşar.
 | `fazlar/*.html` | Haftalık faz planları (zemin + faz 0–5), kişiye özel notlarla |
 | `mufredat.json` | Müfredat: 42 madde, fazlar, ustalık basamakları (tek kaynak) |
 | `durum.json` | **İlerlemenin tek kaynağı** — git ile izlenir |
-| `defter.py` | CLI + `defter.html` üreticisi (yalnız stdlib, Python ≥3.9) |
-| `defter.html` | Etkileşimli defter; sunucudan açılınca en taze `durum.json`'u kendisi çeker |
+| `defter.py` + `atolye` | Terminal aracı: `bugun`, `rapor`, `seviye`, `seans`, `yayinla` (yalnız stdlib) |
+| `defter.html` + `defter.js` | Etkileşimli defter: ⌘K paleti, j/k + 0–4 klavye, geri al, seans günlüğü |
+| `atolye.js` | İlerleme matematiğinin tek kaynağı (defter.py'ın JS ikizi) |
+| `pano.js` / `github.js` | Ana pano çizimi / opsiyonel tarayıcıdan-depoya-yazma |
+| `sw.js` + `manifest.json` | Çevrimdışı çalışma + telefona kurulum (PWA) |
 | `stil.css` / `serve.mjs` | Ortak stil / yerel önizleme sunucusu |
+| `capraz-test.sh` | Python ve JS aynı sonucu veriyor mu — ayrışırsa kırmızı |
 | `zemin/ faz0..faz5/` | Faz çalışma klasörleri — kanıt kodların buraya, her seans bir commit |
+
+## Kurulum (bir kez)
+
+```bash
+ln -sf ~/Desktop/llm-atolyesi/atolye /usr/local/bin/atolye
+```
+
+Artık her dizinden `atolye` yazabilirsin.
 
 ## Günlük kullanım
 
 ```bash
-python3 defter.py durum        # terminal panosu: %'ler, kapılar, bu haftaki saat
-python3 defter.py liste f0     # madde kimlikleri ve basamakları
-python3 defter.py seviye f0a 2 # micrograd'ı kapalı kitap yazdım
-python3 defter.py seans --saat 2.5 --faz f0 --yaptim "micrograd yeniden yazıldı" \
-    --anlamadim "topo sort sırası" --yarin "makemore 1"
-python3 defter.py html         # defter.html'i tazele, tarayıcıda aç
+atolye                          # bugün ne yapmalıyım: sıradaki iş, haftalık durum, açık sorular
+atolye seviye z1 3 -y           # basamak ata + commit + push (tek komut)
+atolye seans --saat 2.5 --faz f0 --yaptim "micrograd yeniden yazıldı" \
+    --anlamadim "topo sort sırası" --yarin "makemore 1" -y
+atolye rapor                    # haftalık retro: saat grafiği, en verimli gün, kapıya kalan
+atolye durum | atolye liste f0  # pano | madde kimlikleri
+atolye ac                       # canlı siteyi aç · atolye site → yerel sunucu
 ```
+
+`-y` (`--yayinla`) bayrağı: `durum.json` commit'lenip push'lanır,
+site birkaç dakika içinde güncellenir. Bayrağı unutursan sonra `atolye yayinla`.
 
 Tarayıcı defterinde yapılan değişiklikler localStorage'da saklanır;
 alttaki **"durum.json indir"** düğmesiyle indirip depodakiyle değiştir
-(ya da `python3 defter.py ice-aktar indirilen.json`). Tek veri kaynağı
-her zaman depodaki `durum.json`'dur.
+(ya da `atolye ice-aktar indirilen.json`). Tek veri kaynağı her zaman
+depodaki `durum.json`'dur.
+
+## Telefondan kullanmak
+
+Siteyi Safari'de aç → Paylaş → **Ana Ekrana Ekle**. Uygulama gibi açılır ve
+çevrimdışı çalışır. Telefondan kayıt tutmak istersen defterin altındaki
+**⚙︎ bölümünden** kendi fine-grained GitHub token'ını girebilirsin (yalnız
+`llm-atolyesi` deposu · yalnız *Contents: Read and write* · GitHub'da bir
+son kullanma tarihi ver). "Bu tarayıcıda hatırla" kutusunu işaretlemezsen
+token sekme kapanınca silinir.
+
+**Bilerek karar ver:** `alicetinkaya76.github.io` altındaki *bütün* proje
+siteleri aynı kaynağı paylaşır, yani aynı `localStorage`'ı görür. Token'ı
+hatırlatırsan, o kaynakta çalışan herhangi bir betik onu okuyabilir — bu
+yüzden kapsam tek depo ve tek izinle sınırlı tutulur; en kötü senaryoda
+kaybedilen şey bu öğrenme deposuna yazma yetkisidir. Token'sız da site
+tam çalışır; kayıt `durum.json indir` ya da terminal ile yapılır.
+
+## Klavye
+
+| Tuş | İş |
+|---|---|
+| `⌘K` / `/` | komut paleti (madde, faz, komut ara) |
+| `j` / `k` | maddeler arasında gez |
+| `0`–`4` | odaktaki maddeye basamak ata |
+| `u` | geri al |
+| `n` | yeni seans |
+| `?` | kısayolları göster |
 
 ## Yöntem (kısa)
 

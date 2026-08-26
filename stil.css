@@ -7,6 +7,13 @@
   --fz: #5f6f6a; --f0: #440154; --f1: #414487; --f2: #2a788e;
   --f3: #22a884; --f4: #7ad151; --f5: #e3ce1f;
   --badge-ink-dark: #1a2418;
+  /* İlerleme çubukları için ayrı ramp. Rozetlerdeki viridis renkleri
+     --surface-2 zemininde ölçüldüğünde açık temada f3/f4/f5 (2.69 / 1.70 /
+     1.44) ve koyu temada fz/f0/f2 3:1'in altında kalıyor — yani "kapıya en
+     yakın" fazların çubukları görünmez oluyordu. Rozetler kendi mürekkep
+     dengesini koruyor; yalnızca çubuklar bu ramp'i kullanır. */
+  --fz-bar: #5f6f6a; --f0-bar: #440154; --f1-bar: #414487; --f2-bar: #2a788e;
+  --f3-bar: #14806a; --f4-bar: #4a922c; --f5-bar: #8a7a10;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -15,6 +22,8 @@
     --accent: #4cc0a9; --accent-ink: #6fd3bf; --code-bg: #1d2926;
     --warn: #e08b4a; --ok: #4cc0a9; --f5: #fde725;
     --f0: #8a4ba0; --f1: #6674cc;
+    --fz-bar: #8ea39d; --f0-bar: #a765bd; --f1-bar: #6674cc; --f2-bar: #41a0ba;
+    --f3-bar: #22a884; --f4-bar: #7ad151; --f5-bar: #fde725;
   }
 }
 :root[data-theme="dark"] {
@@ -23,6 +32,8 @@
   --accent: #4cc0a9; --accent-ink: #6fd3bf; --code-bg: #1d2926;
   --warn: #e08b4a; --ok: #4cc0a9; --f5: #fde725;
   --f0: #8a4ba0; --f1: #6674cc;
+  --fz-bar: #8ea39d; --f0-bar: #a765bd; --f1-bar: #6674cc; --f2-bar: #41a0ba;
+  --f3-bar: #22a884; --f4-bar: #7ad151; --f5-bar: #fde725;
 }
 * { box-sizing: border-box; }
 body {
@@ -30,7 +41,15 @@ body {
   font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
   font-size: 1.03rem; line-height: 1.62;
 }
-.wrap { max-width: 46rem; margin: 0 auto; padding: 2.2rem 1.2rem 5rem; }
+.wrap {
+  max-width: 46rem; margin: 0 auto;
+  /* viewport-fit=cover + black-translucent durum çubuğu: içerik çentiğin
+     altına kayar. env() dolgusu olmadan başlık iPhone'da gizlenir. */
+  padding: calc(2.2rem + env(safe-area-inset-top, 0px))
+           calc(1.2rem + env(safe-area-inset-right, 0px))
+           calc(5rem + env(safe-area-inset-bottom, 0px))
+           calc(1.2rem + env(safe-area-inset-left, 0px));
+}
 h1, h2, h3 { font-family: "Bricolage Grotesque", "Helvetica Neue", sans-serif; line-height: 1.15; text-wrap: balance; }
 h1 { font-size: clamp(1.9rem, 5.5vw, 2.7rem); font-weight: 800; margin: 0.4rem 0 0.6rem; letter-spacing: -0.01em; }
 h2 { font-size: 1.4rem; font-weight: 700; margin: 2.4rem 0 0.8rem; }

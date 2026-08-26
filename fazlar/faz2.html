@@ -2,6 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.github.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Faz 2 — İlk Gerçek Pretraining</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -22,31 +23,31 @@
   <div class="hafta">
     <h3>Hafta 1–2 — Kitap: mimari <span class="sure">· Raschka bl. 1–5 · ~15 sa</span></h3>
     <ul class="plain">
-      <li><span class="madde">f2a</span> <a href="https://www.manning.com/books/build-a-large-language-model-from-scratch">Build a Large Language Model (From Scratch)</a> + <a href="https://github.com/rasbt/LLMs-from-scratch">repo</a> (macOS CI'lı). Bölüm 3'ün attention'ını Faz 0'daki kendi kodunla karşılaştır: farklar deftere.</li>
-      <li><span class="madde">f2c</span> Ara ısınma: <a href="https://github.com/pranavjad/mlx-gpt2">mlx-gpt2</a> — ~200 satır, M-serisinde 10 dakikada karakter-GPT. İlk "Mac'imde transformer eğittim" anı.</li>
+      <li><a class="madde" id="f2a" href="../defter.html#f2a" title="Defterde işaretle: f2a">f2a</a> <a href="https://www.manning.com/books/build-a-large-language-model-from-scratch">Build a Large Language Model (From Scratch)</a> + <a href="https://github.com/rasbt/LLMs-from-scratch">repo</a> (macOS CI'lı). Bölüm 3'ün attention'ını Faz 0'daki kendi kodunla karşılaştır: farklar deftere.</li>
+      <li><a class="madde" id="f2c" href="../defter.html#f2c" title="Defterde işaretle: f2c">f2c</a> Ara ısınma: <a href="https://github.com/pranavjad/mlx-gpt2">mlx-gpt2</a> — ~200 satır, M-serisinde 10 dakikada karakter-GPT. İlk "Mac'imde transformer eğittim" anı.</li>
     </ul>
   </div>
 
   <div class="hafta">
     <h3>Hafta 3 — Kitap: eğitim + MLX mini model <span class="sure">· bl. 5–7 · ~12 sa</span></h3>
     <ul class="plain">
-      <li><span class="madde">f2b</span> Raschka bl. 5–7: pretraining döngüsü, ağırlık yükleme, fine-tune. Bonus defterlerden KV-cache'i şimdi, gerisini Faz 4'te.</li>
-      <li><span class="madde">f2d</span> <a href="https://github.com/N8python/mlx-pretrain">mlx-pretrain</a>: tokenizer eğitimi dahil tam hat; M-serisinde ~2 saatte 200M token üstünde mini model. Önce README örneğini aynen koş; sonra Faz 1'deki kendi tokenizer'ınla tekrar et.</li>
+      <li><a class="madde" id="f2b" href="../defter.html#f2b" title="Defterde işaretle: f2b">f2b</a> Raschka bl. 5–7: pretraining döngüsü, ağırlık yükleme, fine-tune. Bonus defterlerden KV-cache'i şimdi, gerisini Faz 4'te.</li>
+      <li><a class="madde" id="f2d" href="../defter.html#f2d" title="Defterde işaretle: f2d">f2d</a> <a href="https://github.com/N8python/mlx-pretrain">mlx-pretrain</a>: tokenizer eğitimi dahil tam hat; M-serisinde ~2 saatte 200M token üstünde mini model. Önce README örneğini aynen koş; sonra Faz 1'deki kendi tokenizer'ınla tekrar et.</li>
     </ul>
   </div>
 
   <div class="hafta">
     <h3>Hafta 4 — Bulut vaftizi: GPT-2 124M <span class="sure">· ~$10–20 · ~10 sa</span></h3>
     <ul class="plain">
-      <li><span class="madde">f2e</span> <a href="https://github.com/karpathy/build-nanogpt">"Let's reproduce GPT-2"</a> (4 sa video) → <a href="https://github.com/karpathy/llm.c/discussions/481">llm.c reprodüksiyonu</a>: 8×A100'de ~90 dk ≈ $10–20 (Lambda ~$2.79/GPU-sa, RunPod A100 $1.19–1.59/sa). İlk bulut GPU akışın: instance aç → veri indir → koş → checkpoint'i ve loss eğrisini indir → instance'ı KAPAT. Checkpoint disiplini: 10 dk'da bir kaydet; spot kesilirse kaldığın yerden.</li>
+      <li><a class="madde" id="f2e" href="../defter.html#f2e" title="Defterde işaretle: f2e">f2e</a> <a href="https://github.com/karpathy/build-nanogpt">"Let's reproduce GPT-2"</a> (4 sa video) → <a href="https://github.com/karpathy/llm.c/discussions/481">llm.c reprodüksiyonu</a>: 8×A100'de ~90 dk ≈ $10–20 (Lambda ~$2.79/GPU-sa, RunPod A100 $1.19–1.59/sa). İlk bulut GPU akışın: instance aç → veri indir → koş → checkpoint'i ve loss eğrisini indir → instance'ı KAPAT. Checkpoint disiplini: 10 dk'da bir kaydet; spot kesilirse kaldığın yerden.</li>
     </ul>
   </div>
 
   <div class="hafta">
     <h3>Hafta 5–6 — Ölçekleme okuması + Türkçe char-LM <span class="sure">· ~12 sa</span></h3>
     <ul class="plain">
-      <li><span class="madde">f2f</span> Üçleme sırayla: <a href="https://arxiv.org/abs/2001.08361">Kaplan 2020</a> → <a href="https://arxiv.org/abs/2203.15556">Chinchilla</a> (düzeltme: parametre ≈ token) → <a href="https://arxiv.org/abs/2305.16264">Muennighoff veri-kısıtlı</a> (senin durumun: ~4 epoch'a kadar tekrar ≈ yeni veri). Deftere tek paragraf: "Bu üçlü, capstone'umda N parametre / M token seçimini nasıl belirliyor?"</li>
-      <li><span class="madde">f2g</span> Türkçe char-LM: Alatlı külliyatını MLX hattına ver; birkaç boyut dene (tiny/small), val loss eğrilerini üst üste çiz. Ürettiği "sahte Alatlı" pasajlarından en iyi üçünü deftere — hem eğlence hem nitel değerlendirme refleksi.</li>
+      <li><a class="madde" id="f2f" href="../defter.html#f2f" title="Defterde işaretle: f2f">f2f</a> Üçleme sırayla: <a href="https://arxiv.org/abs/2001.08361">Kaplan 2020</a> → <a href="https://arxiv.org/abs/2203.15556">Chinchilla</a> (düzeltme: parametre ≈ token) → <a href="https://arxiv.org/abs/2305.16264">Muennighoff veri-kısıtlı</a> (senin durumun: ~4 epoch'a kadar tekrar ≈ yeni veri). Deftere tek paragraf: "Bu üçlü, capstone'umda N parametre / M token seçimini nasıl belirliyor?"</li>
+      <li><a class="madde" id="f2g" href="../defter.html#f2g" title="Defterde işaretle: f2g">f2g</a> Türkçe char-LM: Alatlı külliyatını MLX hattına ver; birkaç boyut dene (tiny/small), val loss eğrilerini üst üste çiz. Ürettiği "sahte Alatlı" pasajlarından en iyi üçünü deftere — hem eğlence hem nitel değerlendirme refleksi.</li>
     </ul>
   </div>
 

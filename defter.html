@@ -2,474 +2,206 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LLM Atölye Defteri</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.github.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Atölye Defteri</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#111d1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Atölye">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" href="./ikon-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<style id="appcss">
-  :root {
-    --bg: #f6f9f8; --surface: #ffffff; --surface-2: #eef4f2;
-    --text: #1a2523; --muted: #566762; --line: #dbe5e1;
-    --accent: #1e7d78; --accent-ink: #135b57; --code-bg: #eaf1ef;
-    --warn: #b3591a; --ok: #1e7d78;
-    --fz: #5f6f6a; --f0: #440154; --f1: #414487; --f2: #2a788e;
-    --f3: #22a884; --f4: #7ad151; --f5: #e3ce1f;
-    --badge-ink-dark: #1a2418;
+<link rel="stylesheet" href="./stil.css">
+<style>
+  .ozet { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 0.55rem; margin: 1rem 0; }
+  .ozet .k { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0.55rem 0.8rem; }
+  .ozet .v { font-family: "IBM Plex Mono", monospace; font-size: 1.2rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ozet .l { font-size: 0.74rem; color: var(--muted); }
+
+  .arac { display: flex; gap: 0.45rem; flex-wrap: wrap; align-items: center; margin: 0.9rem 0; }
+  .dugme {
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 650; font-size: 0.85rem;
+    background: var(--accent); color: var(--bg); border: none; border-radius: 8px;
+    padding: 0.42rem 0.85rem; cursor: pointer;
   }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #0f1715; --surface: #17211e; --surface-2: #1d2926;
-      --text: #e5edea; --muted: #97a8a2; --line: #26332f;
-      --accent: #4cc0a9; --accent-ink: #6fd3bf; --code-bg: #1d2926;
-      --warn: #e08b4a; --ok: #4cc0a9; --f5: #fde725;
-      --f0: #8a4ba0; --f1: #6674cc;
-    }
+  .dugme:hover { background: var(--accent-ink); }
+  .dugme.ikincil { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+  .dugme.ikincil:hover { border-color: var(--accent); }
+  .dugme:disabled { opacity: 0.45; cursor: default; }
+  .dugme:focus-visible, .lvls button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ipucu { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; color: var(--muted); }
+  kbd {
+    font-family: "IBM Plex Mono", monospace; font-size: 0.72em; background: var(--code-bg);
+    border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0.05em 0.35em;
   }
-  :root[data-theme="dark"] {
-    --bg: #0f1715; --surface: #17211e; --surface-2: #1d2926;
-    --text: #e5edea; --muted: #97a8a2; --line: #26332f;
-    --accent: #4cc0a9; --accent-ink: #6fd3bf; --code-bg: #1d2926;
-    --warn: #e08b4a; --ok: #4cc0a9; --f5: #fde725;
-    --f0: #8a4ba0; --f1: #6674cc;
-  }
-  * { box-sizing: border-box; }
-  body {
-    background: var(--bg); color: var(--text); margin: 0;
-    font-family: "Source Serif 4", Georgia, serif;
-    font-size: 1rem; line-height: 1.55;
-  }
-  .wrap { max-width: 47rem; margin: 0 auto; padding: 2rem 1.1rem 7rem; }
-  h1, h2, h3 { font-family: "Bricolage Grotesque", "Helvetica Neue", sans-serif; line-height: 1.15; text-wrap: balance; }
-  h1 { font-size: clamp(1.7rem, 5vw, 2.4rem); font-weight: 800; margin: 0.3rem 0 0.4rem; }
-  h2 { font-size: 1.25rem; font-weight: 700; margin: 2.2rem 0 0.7rem; }
-  a { color: var(--accent); }
-  .kicker { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
-  .lede { color: var(--muted); margin-top: 0.2rem; font-size: 0.98rem; }
-  code, .mono { font-family: "IBM Plex Mono", monospace; font-size: 0.85em; background: var(--code-bg); border-radius: 4px; padding: 0.06em 0.3em; }
-  .dash { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 0.6rem; margin: 1.2rem 0; }
-  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0.7rem 0.9rem; }
-  .stat .v { font-family: "IBM Plex Mono", monospace; font-size: 1.35rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .stat .l { font-size: 0.78rem; color: var(--muted); }
-  .stat .sub { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; color: var(--muted); }
-  .allbars { display: flex; gap: 0.35rem; margin: 0.4rem 0 0.2rem; }
-  .allbars .pb { flex: 1; height: 0.55rem; border-radius: 4px; background: var(--surface-2); overflow: hidden; position: relative; }
-  .allbars .pb i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; }
-  .pcard { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--pc); border-radius: 0 12px 12px 0; margin: 1rem 0; overflow: hidden; }
-  .phead { display: flex; align-items: center; gap: 0.7rem; padding: 0.8rem 1rem; cursor: pointer; user-select: none; }
+
+  /* faz kartları */
+  .pcard { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--pc); border-radius: 0 12px 12px 0; margin: 0.9rem 0; overflow: hidden; }
+  .phead { display: flex; align-items: center; gap: 0.6rem; padding: 0.7rem 0.95rem; cursor: pointer; user-select: none; }
   .phead:hover { background: var(--surface-2); }
-  .phead .tag { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; padding: 0.15em 0.6em; border-radius: 999px; background: var(--pc); color: #fff; flex-shrink: 0; }
+  .phead .tag { font-family: "IBM Plex Mono", monospace; font-size: 0.66rem; font-weight: 600; letter-spacing: 0.06em; padding: 0.15em 0.55em; border-radius: 999px; background: var(--pc); color: #fff; flex-shrink: 0; }
   .phead .tag.inkdark { color: var(--badge-ink-dark); }
-  .phead .nm { font-family: "Bricolage Grotesque", sans-serif; font-weight: 650; font-size: 1.02rem; flex: 1; min-width: 8rem; }
-  .gate { font-family: "IBM Plex Mono", monospace; font-size: 0.66rem; padding: 0.2em 0.6em; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  .phead .nm { font-family: "Bricolage Grotesque", sans-serif; font-weight: 650; font-size: 0.98rem; flex: 1; min-width: 7rem; }
+  .phead .plan { font-family: "IBM Plex Mono", monospace; font-size: 0.64rem; color: var(--muted); text-decoration: none; }
+  .phead .plan:hover { color: var(--accent); }
+  .gate { font-family: "IBM Plex Mono", monospace; font-size: 0.63rem; padding: 0.18em 0.55em; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
   .gate.on { border-color: var(--ok); color: var(--ok); font-weight: 600; }
   .gate.run { border-color: var(--warn); color: var(--warn); }
-  .ppct { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .chev { color: var(--muted); font-size: 0.8rem; }
-  .open .chev { transform: rotate(90deg); }
+  .ppct { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .chev { color: var(--muted); font-size: 0.75rem; }
+  .pcard.acik .chev { transform: rotate(90deg); }
   .pbody { display: none; border-top: 1px solid var(--line); }
-  .open .pbody { display: block; }
-  .item { padding: 0.7rem 1rem; border-bottom: 1px solid var(--line); }
+  .pcard.acik .pbody { display: block; }
+
+  .item { padding: 0.6rem 0.95rem; border-bottom: 1px solid var(--line); scroll-margin-top: 4rem; }
   .item:last-child { border-bottom: none; }
-  .item .row { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
-  .item .lbl { flex: 1; min-width: 12rem; font-size: 0.95rem; }
-  .item .core { font-family: "IBM Plex Mono", monospace; font-size: 0.62rem; color: var(--muted); border: 1px dashed var(--line); border-radius: 4px; padding: 0 0.3em; vertical-align: middle; }
-  .item .hint { font-size: 0.82rem; color: var(--muted); margin: 0.15rem 0 0.3rem; }
-  .lvls { display: flex; gap: 0.25rem; align-items: center; }
+  .item.odak { background: var(--surface-2); box-shadow: inset 3px 0 0 var(--accent); }
+  .item.vurgu { animation: vurgula 1.6s ease-out; }
+  @keyframes vurgula { from { background: color-mix(in srgb, var(--accent) 22%, transparent); } to { background: transparent; } }
+  .item .row { display: flex; align-items: baseline; gap: 0.55rem; flex-wrap: wrap; }
+  .item .lbl { flex: 1; min-width: 11rem; font-size: 0.93rem; }
+  .item .kid {
+    font-family: "IBM Plex Mono", monospace; font-size: 0.62rem;
+    color: var(--muted); text-decoration: none; border-bottom: 1px dotted var(--line);
+  }
+  .item .kid:hover { color: var(--accent); border-bottom-color: var(--accent); }
+  .item .core { font-family: "IBM Plex Mono", monospace; font-size: 0.6rem; color: var(--muted); border: 1px dashed var(--line); border-radius: 4px; padding: 0 0.28em; }
+  .item .hint { font-size: 0.8rem; color: var(--muted); margin: 0.12rem 0 0.25rem; }
+  .lvls { display: flex; gap: 0.22rem; }
   .lvls button {
-    font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; font-weight: 600;
-    width: 1.75rem; height: 1.55rem; border-radius: 5px; border: 1px solid var(--line);
+    font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; font-weight: 600;
+    width: 1.7rem; height: 1.5rem; border-radius: 5px; border: 1px solid var(--line);
     background: var(--surface-2); color: var(--muted); cursor: pointer; padding: 0;
   }
   .lvls button:hover { border-color: var(--pc); }
-  .lvls button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .lvls button.hit { background: var(--pc); border-color: var(--pc); color: #fff; }
   .lvls button.hit.inkdark { color: var(--badge-ink-dark); }
-  .lvlname { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; color: var(--muted); margin-top: 0.25rem; }
-  .jform { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; }
-  .jgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 0.6rem; margin-bottom: 0.6rem; }
-  .jform label { display: block; font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.2rem; }
+  .lvlname { font-family: "IBM Plex Mono", monospace; font-size: 0.66rem; color: var(--muted); margin-top: 0.2rem; }
+
+  /* günlük */
+  .jform { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 0.9rem 1.05rem; }
+  .jgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 0.55rem; margin-bottom: 0.55rem; }
+  .jform label { display: block; font-family: "IBM Plex Mono", monospace; font-size: 0.66rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.15rem; }
   .jform input, .jform select, .jform textarea {
     width: 100%; border: 1px solid var(--line); border-radius: 7px; background: var(--bg);
-    color: var(--text); font-family: "Source Serif 4", Georgia, serif; font-size: 0.92rem;
-    padding: 0.45rem 0.6rem;
+    color: var(--text); font-family: "Source Serif 4", Georgia, serif; font-size: 0.92rem; padding: 0.42rem 0.55rem;
   }
-  .jform textarea { min-height: 2.6rem; resize: vertical; }
+  .jform textarea { min-height: 2.5rem; resize: vertical; }
   .jform input:focus, .jform select:focus, .jform textarea:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
-  .btn {
-    font-family: "Bricolage Grotesque", sans-serif; font-weight: 650; font-size: 0.9rem;
-    background: var(--accent); color: var(--bg); border: none; border-radius: 8px;
-    padding: 0.5rem 1.1rem; cursor: pointer;
+  .jentry { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0.6rem 0.9rem; margin: 0.5rem 0; }
+  .jentry .top { display: flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; }
+  .jentry .d { font-family: "IBM Plex Mono", monospace; font-size: 0.73rem; font-weight: 600; }
+  .jentry .h { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; color: var(--muted); }
+  .jentry .del {
+    margin-left: auto; background: none; border: none; color: var(--muted);
+    cursor: pointer; font-size: 0.82rem;
+    /* WCAG 2.5.8: en az 24×24 dokunma alanı — tek yıkıcı denetim bu */
+    min-width: 1.6rem; min-height: 1.6rem; border-radius: 6px; line-height: 1;
   }
-  .btn:hover { background: var(--accent-ink); }
-  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .jentry { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0.7rem 0.95rem; margin: 0.6rem 0; }
-  .jentry .top { display: flex; gap: 0.7rem; align-items: baseline; flex-wrap: wrap; }
-  .jentry .d { font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; font-weight: 600; }
-  .jentry .h { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; color: var(--muted); }
-  .jentry .del { margin-left: auto; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.85rem; }
+  .jentry .del:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .jentry .del:hover { color: var(--warn); }
-  .jentry dl { margin: 0.3rem 0 0; }
-  .jentry dt { font-family: "IBM Plex Mono", monospace; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-top: 0.3rem; }
-  .jentry dd { margin: 0; font-size: 0.92rem; }
-  .savebar {
+  .jentry dt { font-family: "IBM Plex Mono", monospace; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-top: 0.25rem; }
+  .jentry dd { margin: 0; font-size: 0.9rem; }
+  .jentry dl { margin: 0.25rem 0 0; }
+
+  /* kayıt çubuğu */
+  .kayitbar {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
     background: var(--surface); border-top: 1px solid var(--line);
-    padding: 0.6rem 1rem; display: none; align-items: center; gap: 0.8rem; justify-content: center; flex-wrap: wrap;
+    padding: 0.55rem 1rem calc(0.55rem + env(safe-area-inset-bottom, 0px));
+    display: none; align-items: center; gap: 0.6rem; justify-content: center; flex-wrap: wrap;
   }
-  .savebar.show { display: flex; }
-  .savebar .msg { font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--warn); }
-  .banner { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 0.6rem 0.9rem; font-size: 0.88rem; color: var(--muted); margin: 0.8rem 0; }
-  .legend { font-size: 0.85rem; color: var(--muted); }
-  .foot { color: var(--muted); font-size: 0.8rem; border-top: 1px solid var(--line); margin-top: 2.5rem; padding-top: 1rem; font-family: "IBM Plex Mono", monospace; }
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  .kayitbar.gorunur { display: flex; }
+  .kayitbar .msg { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--warn); }
+  .kayitbar .msg.iyi { color: var(--ok); }
+
+  /* komut paleti */
+  .perde { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 90; display: none; }
+  .perde.acik { display: block; }
+  .palet {
+    position: fixed; z-index: 91; left: 50%; top: 12vh; transform: translateX(-50%);
+    width: min(34rem, 92vw); background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; box-shadow: 0 18px 50px rgba(0,0,0,0.3); display: none; overflow: hidden;
+  }
+  .palet.acik { display: block; }
+  .palet input {
+    width: 100%; border: none; border-bottom: 1px solid var(--line); background: transparent;
+    color: var(--text); font-family: "Source Serif 4", Georgia, serif; font-size: 1rem; padding: 0.75rem 0.95rem;
+  }
+  .palet input:focus { outline: none; }
+  .palet ul { list-style: none; margin: 0; padding: 0.25rem; max-height: 52vh; overflow-y: auto; }
+  .palet li {
+    display: flex; align-items: baseline; gap: 0.5rem; padding: 0.42rem 0.7rem;
+    border-radius: 7px; cursor: pointer; font-size: 0.92rem;
+  }
+  .palet li[aria-selected="true"] { background: var(--surface-2); box-shadow: inset 2px 0 0 var(--accent); }
+  .palet li .pk { font-family: "IBM Plex Mono", monospace; font-size: 0.62rem; color: var(--muted); flex-shrink: 0; width: 3rem; }
+  .palet li .pl { flex: 1; }
+  .palet li .pr { font-family: "IBM Plex Mono", monospace; font-size: 0.62rem; color: var(--muted); }
+  .palet .bos { padding: 0.9rem; color: var(--muted); font-size: 0.9rem; text-align: center; }
+
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: 4.2rem; z-index: 80;
+    background: var(--text); color: var(--bg); font-size: 0.86rem;
+    padding: 0.5rem 0.9rem; border-radius: 8px; opacity: 0; pointer-events: none;
+    transition: opacity 0.18s;
+  }
+  .toast.gor { opacity: 0.95; }
+  .banner { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 0.55rem 0.85rem; font-size: 0.86rem; color: var(--muted); margin: 0.7rem 0; }
+  .banner.dikkat { border-color: var(--warn); }
+  details.gh { margin: 1.4rem 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 0.7rem 1rem; }
+  details.gh summary { cursor: pointer; font-family: "Bricolage Grotesque", sans-serif; font-weight: 650; font-size: 0.95rem; }
+  details.gh input[type=password] {
+    width: 100%; border: 1px solid var(--line); border-radius: 7px; background: var(--bg);
+    color: var(--text); font-family: "IBM Plex Mono", monospace; font-size: 0.8rem; padding: 0.45rem 0.6rem; margin: 0.4rem 0;
+  }
+  @media (prefers-reduced-motion: reduce) { *, .item.vurgu { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
-<div id="app" class="wrap"><noscript>Bu defter JavaScript ister.</noscript></div>
-<script type="application/json" id="mufredat">{"v": 1, "levels": {"yap": ["başlamadım", "bütünü gördüm", "kapalı kitap yazdım", "egzersiz/test yeşil", "Türkçe büküm + defter"], "oku": ["başlamadım", "okudum", "deftere özetledim"]}, "phases": [{"id": "z", "tag": "ZEMİN", "name": "Python / PyTorch zemini", "color": "var(--fz)", "dark": false}, {"id": "f0", "tag": "FAZ 0", "name": "Karpathy sıfırdan serisi", "color": "var(--f0)", "dark": false}, {"id": "f1", "tag": "FAZ 1", "name": "Tokenizer + Türkçe", "color": "var(--f1)", "dark": false}, {"id": "f2", "tag": "FAZ 2", "name": "İlk gerçek pretraining", "color": "var(--f2)", "dark": false}, {"id": "f3", "tag": "FAZ 3", "name": "Derinlik: CS336", "color": "var(--f3)", "dark": true}, {"id": "f4", "tag": "FAZ 4", "name": "Post-training + eval", "color": "var(--f4)", "dark": true}, {"id": "f5", "tag": "FAZ 5", "name": "Capstone: nanochat + Türkçe model", "color": "var(--f5)", "dark": true}], "items": [{"id": "z1", "p": "z", "t": "yap", "max": 3, "core": true, "lbl": "Tensor Puzzles — 21/21", "hint": "Colab'da; tek satır çözümler. L3 = tüm bulmacalar geçti."}, {"id": "z2", "p": "z", "t": "oku", "core": true, "lbl": "PyTorch \"Learn the Basics\" (7 modül)"}, {"id": "z3", "p": "z", "t": "oku", "core": false, "lbl": "NumPy broadcasting sayfası"}, {"id": "z4", "p": "z", "t": "oku", "core": true, "lbl": "nanoGPT model.py öz-testi", "hint": "L2 = açıklayamadığın satır kalmadı (Faz 0 sonunda tekrarla)."}, {"id": "f0a", "p": "f0", "t": "yap", "core": true, "lbl": "micrograd (ZtH 1)", "hint": "L4 = bilinçli bir gradyan hatası üretip autograd'ında yakala."}, {"id": "f0b", "p": "f0", "t": "yap", "core": true, "lbl": "makemore 1–5 (ZtH 2–6)"}, {"id": "f0c", "p": "f0", "t": "yap", "core": true, "lbl": "\"Let's build GPT\" (ZtH 7)"}, {"id": "f0d", "p": "f0", "t": "yap", "core": true, "lbl": "makemore Türkçe varyantı", "hint": "Türkçe isim/toponim listesiyle; ünlü uyumu gözlemini deftere yaz."}, {"id": "f0e", "p": "f0", "t": "yap", "max": 3, "core": true, "lbl": "microgpt kapalı-kitap sınavı", "hint": "~200 satırı boş dosyadan yeniden türet."}, {"id": "f1a", "p": "f1", "t": "yap", "core": true, "lbl": "Tokenizer videosu + minbpe exercise.md"}, {"id": "f1b", "p": "f1", "t": "yap", "core": true, "lbl": "Kendi korpusunda Türkçe BPE + fertility tablosu"}, {"id": "f1c", "p": "f1", "t": "yap", "core": false, "lbl": "HF Tokenizers (ch6) + SentencePiece BPE↔unigram"}, {"id": "f1d", "p": "f1", "t": "oku", "core": true, "lbl": "%TR / token saflığı makalesi (2502.07057)"}, {"id": "f1e", "p": "f1", "t": "oku", "core": false, "lbl": "Morfoloji-temelli hibrit tokenizer (2508.14292)"}, {"id": "f1f", "p": "f1", "t": "oku", "core": true, "lbl": "Altınok 2026 — optimal Türkçe subword (2602.06942)"}, {"id": "f1g", "p": "f1", "t": "yap", "max": 3, "core": false, "lbl": "zeyrek ile %TR ölçümü"}, {"id": "f2a", "p": "f2", "t": "yap", "core": true, "lbl": "Raschka kitabı bl. 1–5 (mimari)"}, {"id": "f2b", "p": "f2", "t": "yap", "core": true, "lbl": "Raschka bl. 5–7 (eğitim + fine-tune)"}, {"id": "f2c", "p": "f2", "t": "yap", "max": 3, "core": false, "lbl": "mlx-gpt2 — 10 dakikalık ilk koşu"}, {"id": "f2d", "p": "f2", "t": "yap", "core": true, "lbl": "mlx-pretrain ile mini model (~200M token)"}, {"id": "f2e", "p": "f2", "t": "yap", "max": 3, "core": true, "lbl": "build-nanogpt + ~$10 bulut GPT-2 124M", "hint": "İlk bulut GPU koşun; loss eğrisini sakla."}, {"id": "f2f", "p": "f2", "t": "oku", "core": true, "lbl": "Ölçekleme üçlemesi: Kaplan → Chinchilla → veri-kısıtlı"}, {"id": "f2g", "p": "f2", "t": "yap", "core": true, "lbl": "Türkçe char-LM (kendi korpusun, MLX)"}, {"id": "f3a", "p": "f3", "t": "yap", "core": true, "lbl": "CS336 A1 — tokenizer+transformer (testler yeşil)"}, {"id": "f3b", "p": "f3", "t": "yap", "max": 3, "core": false, "lbl": "CS336 A2 — Triton/DDP (bulut NVIDIA)"}, {"id": "f3c", "p": "f3", "t": "yap", "max": 3, "core": false, "lbl": "CS336 A3 — ölçekleme yasaları"}, {"id": "f3d", "p": "f3", "t": "yap", "core": true, "lbl": "CS336 A4 — veri küratörlüğü"}, {"id": "f3e", "p": "f3", "t": "yap", "max": 3, "core": false, "lbl": "CS336 A5 — alignment + RL"}, {"id": "f3f", "p": "f3", "t": "yap", "core": true, "lbl": "datatrove ile Türkçe slice pipeline'ı (dedup dahil)"}, {"id": "f3g", "p": "f3", "t": "oku", "core": false, "lbl": "Okuma rafı: Smol Playbook · OLMo 3 · Llama 3"}, {"id": "f4a", "p": "f4", "t": "yap", "core": true, "lbl": "Raschka bl.7 SFT + DPO defteri (from scratch)"}, {"id": "f4b", "p": "f4", "t": "yap", "core": true, "lbl": "TRL ile SFT + DPO koşusu"}, {"id": "f4c", "p": "f4", "t": "yap", "core": false, "lbl": "mlx-lm LoRA — Türkçe veride, cihazda"}, {"id": "f4d", "p": "f4", "t": "oku", "core": true, "lbl": "RLHF Book çekirdek bölümler"}, {"id": "f4e", "p": "f4", "t": "yap", "max": 3, "core": false, "lbl": "Reasoning kitabı — sıfırdan GRPO (bl. 5–7)"}, {"id": "f4f", "p": "f4", "t": "yap", "core": true, "lbl": "lm-eval-harness entegrasyonu + önce/sonra tablosu"}, {"id": "f5a", "p": "f5", "t": "yap", "core": true, "lbl": "nanochat kodu + Mac mini config"}, {"id": "f5b", "p": "f5", "t": "yap", "max": 3, "core": true, "lbl": "nanochat d20 speedrun (CORE skoru raporlu)"}, {"id": "f5c", "p": "f5", "t": "yap", "core": true, "lbl": "Türkçe veri slice — 1–10B token, dedup'lu"}, {"id": "f5d", "p": "f5", "t": "yap", "core": true, "lbl": "Türkçe model eğitimi (100–350M)"}, {"id": "f5e", "p": "f5", "t": "yap", "core": true, "lbl": "Cetvel eval + GGUF → kendi ollama'nda servis"}, {"id": "f5f", "p": "f5", "t": "yap", "max": 3, "core": false, "lbl": "Yayın rotası: BabyLM / Osmanlı-OTC kararı + taslak"}]}</script>
-<script type="application/json" id="state">{"v": 1, "items": {}, "journal": [], "updated": null}</script>
-<script id="appjs">
-(async function () {
-  'use strict';
-  var LS_KEY = 'llm-atolye-defteri-v1';
-  var MUF = JSON.parse(document.getElementById('mufredat').textContent);
-  var ITEMS = MUF.items, PHASES = MUF.phases, LEVELS = MUF.levels;
-  var ITEM_BY_ID = {};
-  ITEMS.forEach(function (i) { ITEM_BY_ID[i.id] = i; });
+<div class="wrap">
+  <p class="kicker"><a href="index.html" style="color:inherit;text-decoration:none">← atölye</a> · <a href="harita.html" style="color:inherit;text-decoration:none">harita</a> · seans defteri</p>
+  <h1>Atölye Defteri</h1>
+  <p class="lede">Veri kaynağı depodaki <code>durum.json</code>. Değişikliklerin önce tarayıcıda tutulur; <kbd>⌘K</kbd> ile her şeye ulaşır, <kbd>j</kbd>/<kbd>k</kbd> ile gezer, <kbd>0</kbd>–<kbd>4</kbd> ile basamak atarsın.</p>
 
-  function itemMax(it) { return it.max != null ? it.max : (it.t === 'yap' ? 4 : 2); }
-  function passLevel(it) { return Math.min(it.t === 'yap' ? 3 : 2, itemMax(it)); }
-  function levelNames(it) { return LEVELS[it.t].slice(0, itemMax(it) + 1); }
+  <div id="banner-alani"></div>
+  <div class="ozet" id="ozet"></div>
 
-  function defaultState() { return { v: 1, items: {}, journal: [], updated: null }; }
-  function normalizeState(s) {
-    if (!s || typeof s !== 'object') return null;
-    var out = defaultState();
-    out.updated = (typeof s.updated === 'string') ? s.updated : null;
-    if (s.items && typeof s.items === 'object') {
-      Object.keys(s.items).forEach(function (k) {
-        var it = ITEM_BY_ID[k]; if (!it) return;
-        var v = parseInt(s.items[k], 10);
-        if (isNaN(v) || v <= 0) return;
-        out.items[k] = Math.min(v, itemMax(it));
-      });
-    }
-    if (Array.isArray(s.journal)) {
-      s.journal.forEach(function (e) {
-        if (!e || typeof e !== 'object') return;
-        if (typeof e.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(e.date)) return;
-        out.journal.push({
-          id: String(e.id || 'j' + Math.random().toString(36).slice(2)),
-          date: e.date,
-          hours: (+e.hours > 0) ? +e.hours : 0,
-          phase: typeof e.phase === 'string' ? e.phase : 'z',
-          yaptim: String(e.yaptim || ''), ogrendim: String(e.ogrendim || ''),
-          anlamadim: String(e.anlamadim || ''), yarin: String(e.yarin || '')
-        });
-      });
-    }
-    return out;
-  }
+  <div class="arac">
+    <button class="dugme ikincil" id="btn-palet">⌘K komut paleti</button>
+    <button class="dugme ikincil" id="btn-yeni">Yeni seans</button>
+    <button class="dugme ikincil" id="btn-ac-kapa">Tümünü aç/kapa</button>
+    <span class="ipucu" id="klavye-ipucu"><kbd>?</kbd> kısayollar</span>
+  </div>
 
-  var embedded = null;
-  try { embedded = normalizeState(JSON.parse(document.getElementById('state').textContent)); } catch (e) { embedded = null; }
-  /* sunucudan (GitHub Pages / yerel serve) açıldıysa depodaki en taze durum.json'u çek;
-     dosyadan (file://) açıldıysa gömülü anlık görüntüyle yetin */
-  var fetched = null;
-  try {
-    var resp = await fetch('durum.json?t=' + Date.now(), { cache: 'no-store' });
-    if (resp.ok) fetched = normalizeState(await resp.json());
-  } catch (e) { fetched = null; }
-  var repoState = fetched || embedded || defaultState();
-  var REPO_JSON = JSON.stringify(repoState);
-  var state = repoState;
-  var localWasNewer = false;
-  try {
-    var rawLoc = localStorage.getItem(LS_KEY);
-    if (rawLoc) {
-      var loc = normalizeState(JSON.parse(rawLoc));
-      if (loc && loc.updated && (!state.updated || loc.updated > state.updated) && JSON.stringify(loc) !== REPO_JSON) {
-        state = loc; localWasNewer = true;
-      }
-    }
-  } catch (e) { /* localStorage yoksa depo hâliyle devam */ }
+  <p class="legend" id="merdiven"></p>
 
-  var storageBroken = false;
-  function saveLocal() {
-    state.updated = new Date().toISOString();
-    try { localStorage.setItem(LS_KEY, JSON.stringify(state)); storageBroken = false; }
-    catch (e) { storageBroken = true; }
-  }
-  function isDirty() { return JSON.stringify(state) !== REPO_JSON; }
-  function downloadState() {
-    var blob = new Blob([JSON.stringify(state, null, 1) + '\n'], { type: 'application/json' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url; a.download = 'durum.json';
-    document.body.appendChild(a); a.click();
-    setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 500);
-  }
+  <div id="fazlar"></div>
 
-  function todayLocal() {
-    var d = new Date();
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  }
-  function isoWeekKey(dstr) {
-    var d = new Date(dstr + 'T12:00:00');
-    if (isNaN(d.getTime())) return '';
-    var day = (d.getDay() + 6) % 7; d.setDate(d.getDate() - day);
-    return d.toISOString().slice(0, 10);
-  }
-  function lvl(id) { return state.items[id] || 0; }
-  function phaseItems(pid) { return ITEMS.filter(function (i) { return i.p === pid; }); }
-  function phasePct(pid) {
-    var its = phaseItems(pid); if (!its.length) return 0;
-    var s = 0; its.forEach(function (i) { s += lvl(i.id) / itemMax(i); });
-    return Math.round(100 * s / its.length);
-  }
-  function gateStatus(pid) {
-    var core = phaseItems(pid).filter(function (i) { return i.core; });
-    var allPass = core.every(function (i) { return lvl(i.id) >= passLevel(i); });
-    var oneMax = core.some(function (i) { return lvl(i.id) >= itemMax(i); });
-    if (allPass && oneMax) return 'on';
-    return phaseItems(pid).some(function (i) { return lvl(i.id) > 0; }) ? 'run' : 'off';
-  }
-  function overallPct() {
-    var core = ITEMS.filter(function (i) { return i.core; });
-    var s = 0; core.forEach(function (i) { s += lvl(i.id) / itemMax(i); });
-    return Math.round(100 * s / core.length);
-  }
-  function hoursThisWeek() {
-    var wk = isoWeekKey(todayLocal()), s = 0;
-    if (!wk) return 0;
-    state.journal.forEach(function (e) { if (isoWeekKey(e.date) === wk) s += (+e.hours || 0); });
-    return s;
-  }
-  function totalHours() {
-    var s = 0; state.journal.forEach(function (e) { s += (+e.hours || 0); });
-    return s;
-  }
-  function esc(x) { return String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  <h2 id="gunluk">Seans günlüğü</h2>
+  <div class="jform" id="jform"></div>
+  <div id="jliste"></div>
 
-  var app = document.getElementById('app');
-  var openPhases = {};
-  PHASES.forEach(function (p) { if (gateStatus(p.id) === 'run') openPhases[p.id] = true; });
-  if (!Object.keys(openPhases).length) openPhases.z = true;
+  <details class="gh" id="gh-kutu">
+    <summary>⚙︎ Telefondan/tarayıcıdan doğrudan kaydetme (opsiyonel)</summary>
+    <div id="gh-icerik"></div>
+  </details>
 
-  function el(tag, cls, html) {
-    var n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (html != null) n.innerHTML = html;
-    return n;
-  }
+  <p class="foot" id="altbilgi"></p>
+</div>
 
-  function emptyDraft() { return { date: '', hours: '', phase: 'z', j1: '', j2: '', j3: '', j4: '' }; }
-  var draft = emptyDraft();
+<div class="kayitbar" id="kayitbar"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="perde" id="perde"></div>
+<div class="palet" id="palet" role="dialog" aria-modal="true" aria-label="Komut paleti">
+  <input id="palet-arama" type="text" placeholder="madde, faz ya da komut ara…" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="true" aria-controls="palet-liste" aria-autocomplete="list">
+  <ul id="palet-liste" role="listbox" aria-label="Sonuçlar"></ul>
+</div>
 
-  function render() {
-    app.innerHTML = '';
-    var nav = el('p', 'kicker', '<a href="index.html">← atölye</a> · <a href="harita.html">harita</a> · seans defteri');
-    nav.querySelectorAll('a').forEach(function (a) { a.style.color = 'inherit'; a.style.textDecoration = 'none'; });
-    app.appendChild(nav);
-    app.appendChild(el('h1', null, 'LLM Atölye Defteri'));
-    app.appendChild(el('p', 'lede', 'Veri kaynağı depodaki <code>durum.json</code> — sunucudan açıldıysa sayfa en taze hâlini kendisi çeker. Değişikliklerin tarayıcıda saklanır; depoya taşımak için alttaki "durum.json indir" düğmesini kullan, dosyayı değiştirip commit’le.'));
-
-    if (localWasNewer) app.appendChild(el('div', 'banner', 'Tarayıcıda depodakinden daha yeni kayıt bulundu ve yüklendi. Depoya işlemek için "durum.json indir" → dosyayı değiştir.'));
-    if (storageBroken) app.appendChild(el('div', 'banner', 'Uyarı: tarayıcı depolaması çalışmıyor — sekmeyi kapatmadan önce mutlaka "durum.json indir".'));
-
-    var dash = el('div', 'dash');
-    var wh = hoursThisWeek();
-    dash.appendChild(statBox(overallPct() + '%', 'çekirdek ilerleme', ''));
-    dash.appendChild(statBox(wh.toFixed(1).replace('.0', '') + ' sa', 'bu hafta', 'hedef 8–10 sa'));
-    dash.appendChild(statBox(totalHours().toFixed(1).replace('.0', '') + ' sa', 'toplam', state.journal.length + ' seans'));
-    var last = state.journal.length ? state.journal.map(function (e) { return e.date; }).sort().pop() : null;
-    dash.appendChild(statBox(last ? last.slice(5) : '—', 'son seans', last ? '' : 'henüz kayıt yok'));
-    app.appendChild(dash);
-
-    var bars = el('div', 'allbars');
-    PHASES.forEach(function (p) {
-      var b = el('div', 'pb'); b.title = p.name + ' — %' + phasePct(p.id);
-      var i = el('i'); i.style.background = p.color; i.style.width = phasePct(p.id) + '%';
-      b.appendChild(i); bars.appendChild(b);
-    });
-    app.appendChild(bars);
-
-    app.appendChild(el('p', 'legend', 'Merdiven — yap-maddeleri: <span class="mono">0 başlamadım · 1 bütünü gördüm · 2 kapalı kitap yazdım · 3 egzersiz/test yeşil · 4 Türkçe büküm + defter</span>; oku-maddeleri: <span class="mono">0 · 1 okudum · 2 deftere özetledim</span>. Kapı kuralı: çekirdek (Ç) maddelerin tümü ≥ 3 (oku: ≥ 2) ve en az biri tavanda. Aynı basamağa ikinci kez tıklamak bir basamak geri alır.'));
-
-    PHASES.forEach(function (p) { app.appendChild(phaseCard(p)); });
-
-    app.appendChild(el('h2', null, 'Seans günlüğü'));
-    app.appendChild(journalForm());
-    var list = el('div');
-    state.journal.slice().sort(function (a, b) {
-      if (a.date === b.date) return a.id === b.id ? 0 : (a.id < b.id ? 1 : -1);
-      return a.date < b.date ? 1 : -1;
-    }).forEach(function (e) { list.appendChild(journalEntry(e)); });
-    app.appendChild(list);
-
-    app.appendChild(el('p', 'foot', 'Üretim: 2026-08-24T06:13:35+03:00 · kaynak: durum.json + mufredat.json · üretici: defter.py'));
-    renderSavebar();
-  }
-
-  function statBox(v, l, sub) {
-    var s = el('div', 'stat');
-    s.appendChild(el('div', 'v', esc(v)));
-    s.appendChild(el('div', 'l', esc(l)));
-    if (sub) s.appendChild(el('div', 'sub', esc(sub)));
-    return s;
-  }
-
-  function phaseCard(p) {
-    var card = el('div', 'pcard' + (openPhases[p.id] ? ' open' : ''));
-    card.style.setProperty('--pc', p.color);
-    var head = el('div', 'phead');
-    head.appendChild(el('span', 'tag' + (p.dark ? ' inkdark' : ''), esc(p.tag)));
-    head.appendChild(el('span', 'nm', esc(p.name)));
-    var g = gateStatus(p.id);
-    head.appendChild(el('span', 'gate' + (g === 'on' ? ' on' : g === 'run' ? ' run' : ''),
-      g === 'on' ? 'KAPI GEÇİLDİ' : g === 'run' ? 'sürüyor' : 'başlamadı'));
-    head.appendChild(el('span', 'ppct', '%' + phasePct(p.id)));
-    head.appendChild(el('span', 'chev', '▶'));
-    head.addEventListener('click', function () {
-      openPhases[p.id] = !openPhases[p.id]; render();
-    });
-    card.appendChild(head);
-
-    var body = el('div', 'pbody');
-    phaseItems(p.id).forEach(function (it) {
-      var row = el('div', 'item');
-      var r1 = el('div', 'row');
-      r1.appendChild(el('span', 'lbl', esc(it.lbl) + (it.core ? ' <span class="core">Ç</span>' : '')));
-      var lv = el('div', 'lvls');
-      var names = levelNames(it);
-      for (var n = 0; n <= itemMax(it); n++) {
-        (function (n) {
-          var b = document.createElement('button');
-          b.textContent = n;
-          b.title = names[n];
-          b.setAttribute('aria-label', it.lbl + ': ' + names[n]);
-          if (lvl(it.id) >= n && n > 0) b.className = 'hit' + (p.dark ? ' inkdark' : '');
-          b.addEventListener('click', function () {
-            var cur = lvl(it.id);
-            var next = (cur === n) ? Math.max(0, n - 1) : n;
-            if (next === cur) return;
-            if (next === 0) delete state.items[it.id]; else state.items[it.id] = next;
-            saveLocal(); render();
-          });
-          lv.appendChild(b);
-        })(n);
-      }
-      r1.appendChild(lv);
-      row.appendChild(r1);
-      if (it.hint) row.appendChild(el('div', 'hint', esc(it.hint)));
-      row.appendChild(el('div', 'lvlname', esc(names[lvl(it.id)])));
-      body.appendChild(row);
-    });
-    card.appendChild(body);
-    return card;
-  }
-
-  function journalForm() {
-    var f = el('div', 'jform');
-    var g = el('div', 'jgrid');
-    g.innerHTML =
-      '<div><label for="jd">Tarih</label><input id="jd" type="date"></div>' +
-      '<div><label for="jh">Saat</label><input id="jh" type="number" min="0" step="0.5" placeholder="2.5"></div>' +
-      '<div><label for="jp">Faz</label><select id="jp">' +
-      PHASES.map(function (p) { return '<option value="' + p.id + '">' + esc(p.tag + ' — ' + p.name) + '</option>'; }).join('') +
-      '</select></div>';
-    f.appendChild(g);
-    var g2 = el('div', 'jgrid');
-    g2.innerHTML =
-      '<div><label for="j1">Ne yaptım</label><textarea id="j1"></textarea></div>' +
-      '<div><label for="j2">Ne öğrendim</label><textarea id="j2"></textarea></div>' +
-      '<div><label for="j3">Neyi anlamadım</label><textarea id="j3"></textarea></div>' +
-      '<div><label for="j4">Yarın ilk iş</label><textarea id="j4"></textarea></div>';
-    f.appendChild(g2);
-
-    f.querySelector('#jd').value = draft.date || todayLocal();
-    f.querySelector('#jh').value = draft.hours;
-    f.querySelector('#jp').value = draft.phase;
-    f.querySelector('#j1').value = draft.j1;
-    f.querySelector('#j2').value = draft.j2;
-    f.querySelector('#j3').value = draft.j3;
-    f.querySelector('#j4').value = draft.j4;
-    function syncDraft() {
-      draft.date = f.querySelector('#jd').value;
-      draft.hours = f.querySelector('#jh').value;
-      draft.phase = f.querySelector('#jp').value;
-      draft.j1 = f.querySelector('#j1').value;
-      draft.j2 = f.querySelector('#j2').value;
-      draft.j3 = f.querySelector('#j3').value;
-      draft.j4 = f.querySelector('#j4').value;
-    }
-    f.addEventListener('input', syncDraft);
-    f.addEventListener('change', syncDraft);
-
-    var btn = el('button', 'btn', 'Seansı kaydet');
-    var jmsg = el('span', 'h', '');
-    jmsg.style.marginLeft = '0.7rem';
-    jmsg.style.fontFamily = '"IBM Plex Mono", monospace';
-    jmsg.style.fontSize = '0.72rem';
-    btn.addEventListener('click', function () {
-      var entry = {
-        id: 'j' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-        date: f.querySelector('#jd').value || todayLocal(),
-        hours: parseFloat(f.querySelector('#jh').value) || 0,
-        phase: f.querySelector('#jp').value,
-        yaptim: f.querySelector('#j1').value.trim(),
-        ogrendim: f.querySelector('#j2').value.trim(),
-        anlamadim: f.querySelector('#j3').value.trim(),
-        yarin: f.querySelector('#j4').value.trim()
-      };
-      if (!entry.yaptim && !entry.hours) {
-        jmsg.textContent = 'En azından "ne yaptım" ya da saat gir.';
-        return;
-      }
-      state.journal.push(entry);
-      draft = emptyDraft();
-      saveLocal(); render();
-    });
-    f.appendChild(btn);
-    f.appendChild(jmsg);
-    return f;
-  }
-
-  function journalEntry(e) {
-    var d = el('div', 'jentry');
-    var ph = PHASES.filter(function (p) { return p.id === e.phase; })[0];
-    var top = el('div', 'top');
-    top.appendChild(el('span', 'd', esc(e.date)));
-    top.appendChild(el('span', 'h', esc((e.hours || 0) + ' sa · ' + (ph ? ph.tag : ''))));
-    var del = el('button', 'del', '✕');
-    del.title = 'Seansı sil';
-    del.addEventListener('click', function () {
-      state.journal = state.journal.filter(function (x) { return x.id !== e.id; });
-      saveLocal(); render();
-    });
-    top.appendChild(del);
-    d.appendChild(top);
-    var dl = el('dl');
-    [['Yaptım', e.yaptim], ['Öğrendim', e.ogrendim], ['Anlamadım', e.anlamadim], ['Yarın', e.yarin]].forEach(function (pair) {
-      if (pair[1]) { dl.appendChild(el('dt', null, pair[0])); dl.appendChild(el('dd', null, esc(pair[1]))); }
-    });
-    d.appendChild(dl);
-    return d;
-  }
-
-  var savebar = el('div', 'savebar');
-  document.body.appendChild(savebar);
-  function renderSavebar() {
-    savebar.innerHTML = '';
-    if (!isDirty()) { savebar.className = 'savebar'; return; }
-    savebar.className = 'savebar show';
-    savebar.appendChild(el('span', 'msg', 'Sayfa üretiminden bu yana değişiklik var — depoya işle:'));
-    var b = el('button', 'btn', 'durum.json indir');
-    b.addEventListener('click', function () { downloadState(); });
-    savebar.appendChild(b);
-  }
-
-  render();
-})();
-</script>
+<script src="./atolye.js"></script>
+<script src="./github.js"></script>
+<script src="./defter.js"></script>
 </body>
 </html>
