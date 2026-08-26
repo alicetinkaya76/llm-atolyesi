@@ -219,6 +219,8 @@ def faz_yuzdesi(m, d, pid):
 
 def kapi_durumu(m, d, pid):
     cekirdek = [it for it in faz_maddeleri(m, pid) if it.get("core")]
+    if not cekirdek:
+        return "başlamadı"   # JS ikizi de 'off' döner
     hepsi_gecti = all(sev(d, it["id"]) >= gecis_esigi(it) for it in cekirdek)
     biri_tavanda = any(sev(d, it["id"]) >= tavan(it) for it in cekirdek)
     if hepsi_gecti and biri_tavanda:
@@ -230,6 +232,8 @@ def kapi_durumu(m, d, pid):
 
 def genel_yuzde(m, d):
     cekirdek = [it for it in m["items"] if it.get("core")]
+    if not cekirdek:
+        return 0
     s = sum(sev(d, it["id"]) / tavan(it) for it in cekirdek)
     return yuvarla(100 * s / len(cekirdek))
 
@@ -287,9 +291,11 @@ def ilerleme_serisi(m, d, hafta_sayisi, bugun=None):
     sinirlar = [base - dt.timedelta(weeks=i) + dt.timedelta(days=6)
                 for i in range(hafta_sayisi - 1, -1, -1)]
     seviye, oi, cikti = {}, 0, []
-    for son in sinirlar:
+    for idx, son in enumerate(sinirlar):
         son_key = son.isoformat()
-        while oi < len(olaylar) and olaylar[oi]["d"] <= son_key:
+        # SON kova kalan her şeyi yutar (gerekçe atolye.js'te)
+        son_kova = (idx == len(sinirlar) - 1)
+        while oi < len(olaylar) and (son_kova or olaylar[oi]["d"] <= son_key):
             o = olaylar[oi]
             if o["n"] > 0:
                 seviye[o["id"]] = o["n"]
@@ -300,8 +306,38 @@ def ilerleme_serisi(m, d, hafta_sayisi, bugun=None):
         cikti.append({"hafta": hafta_baslangici(son).isoformat(),
                       "son": son_key,
                       "pct": yuvarla(100 * toplam / len(cekirdek))})
+    # SON NOKTA YETKİLİDİR (gerekçe atolye.js'te)
+    if cikti:
+        cikti[-1]["pct"] = genel_yuzde(m, d)
     return cikti
 
+
+
+
+def kapi_esikleri(m):
+    """Her fazın kapısının sağlanabileceği EN DÜŞÜK çekirdek yüzdesi.
+    'En az biri tavanda' şartı için EN UCUZ maddeyi tavana çıkarmak yeter.
+    atolye.js'teki kapiEsikleri ile aynı sonucu vermek ZORUNDA."""
+    cekirdek = [i for i in m["items"] if i.get("core")]
+    if not cekirdek:
+        return []
+    toplam, out = 0.0, []
+    for p in m["phases"]:
+        faz_core = [i for i in cekirdek if i["p"] == p["id"]]
+        if not faz_core:
+            continue
+        pay = sum(gecis_esigi(i) / tavan(i) for i in faz_core)
+        en_ucuz = min(1 - gecis_esigi(i) / tavan(i) for i in faz_core)
+        toplam += pay + en_ucuz
+        out.append({"id": p["id"], "tag": p["tag"], "pct": 100 * toplam / len(cekirdek)})
+    return out
+
+
+def son_kapi_yuzdesi(m):
+    """Kestirimin hedefi: %100 değil SON KAPI. Kalan pay 4. basamaktır ve
+    hiçbir kapının şartı değildir."""
+    e = kapi_esikleri(m)
+    return e[-1]["pct"] if e else 100.0
 
 
 def kapi_gecmisi(m, d):
@@ -340,7 +376,7 @@ def haftalik_kazanc(m, d, hafta_sayisi=12, bugun=None):
     """Haftalık çekirdek-yüzde kazancı; içinde bulunulan yarım hafta hariç.
     Başlamadan ÖNCEKİ haftalar gözlem sayılmaz — yoksa hiç çalışılmamış
     haftalar 'sıfır hızlı hafta' gibi girip kestirimi haksız karartır."""
-    seri = ilerleme_serisi(m, d, hafta_sayisi + 1, bugun)
+    seri = ilerleme_serisi(m, d, (hafta_sayisi or 12) + 1, bugun)
     if not seri or len(seri) < 2:
         return None
     olaylar = d.get("olaylar") or []
@@ -414,6 +450,7 @@ def tazeleme_kuyrugu(m, d, kac=3, bugun=None):
 # (mulberry32) uint32 aritmetiğiyle taklit edilir.
 KESTIRIM_ASGARI = 5
 KESTIRIM_PENCERE = 20
+KESTIRIM_UFUK = 104   # 2 yıl; gerekçe atolye.js'te
 
 
 def _mulberry32(tohum):
@@ -440,11 +477,16 @@ def kestirim(m, d, kalan_yuzde, bugun=None, tohum=42):
         return {"yeterli": False, "gozlem": len(ham) if ham else 0,
                 "gereken": KESTIRIM_ASGARI,
                 "neden": f"Kestirim için en az {KESTIRIM_ASGARI} tamamlanmış hafta gerekiyor."}
-    if not kalan_yuzde or kalan_yuzde <= 0:
+    if not (kalan_yuzde and kalan_yuzde > 0):   # NaN da buraya düşer
         return {"yeterli": True, "bitti": True, "gozlem": len(ham)}
     if sum(ham) <= 0:
         return {"yeterli": False, "gozlem": len(ham), "durgun": True,
                 "neden": f"Son {len(ham)} haftada ölçülebilir ilerleme yok."}
+
+    ortalama = sum(ham) / len(ham)
+    if kalan_yuzde / ortalama > KESTIRIM_UFUK:
+        return {"yeterli": False, "gozlem": len(ham), "durgun": True,
+                "neden": "Bu hızda iki yıllık ufukta öngörülebilir bir tarih çıkmıyor."}
 
     rnd = _mulberry32(tohum)
     DENEME, SINIR = 10000, 520
@@ -461,13 +503,16 @@ def kestirim(m, d, kalan_yuzde, bugun=None, tohum=42):
         return sonuc[max(0, math.ceil(q * DENEME) - 1)]
 
     p50, p85, p95 = p(0.50), p(0.85), p(0.95)
-    if p50 >= SINIR:
+    if p50 > KESTIRIM_UFUK:
         return {"yeterli": False, "gozlem": len(ham), "durgun": True,
-                "neden": "Bu hızda öngörülebilir bir bitiş tarihi çıkmıyor."}
+                "neden": "Bu hızda iki yıllık ufukta öngörülebilir bir tarih çıkmıyor."}
+    # SINIR'a çarpan yüzdelik "ufukta yok" demektir; tarih basmak
+    # kesinlik izlenimi verir. tarih85 de tarih95 gibi korunmalı.
     return {"yeterli": True, "gozlem": len(ham), "zayif": len(ham) < 10,
             "p50": p50, "p85": p85, "p95": p95,
-            "tarih50": hafta_sonra(p50, bugun), "tarih85": hafta_sonra(p85, bugun),
-            "tarih95": hafta_sonra(p95, bugun) if p95 < SINIR else None}
+            "tarih50": hafta_sonra(p50, bugun) if p50 <= KESTIRIM_UFUK else None,
+            "tarih85": hafta_sonra(p85, bugun) if p85 <= KESTIRIM_UFUK else None,
+            "tarih95": hafta_sonra(p95, bugun) if p95 <= KESTIRIM_UFUK else None}
 
 
 def kapiya_kalan_yuzde(m, d, pid):
@@ -483,6 +528,12 @@ def kapiya_kalan_yuzde(m, d, pid):
         if simdi < hedef:
             eksik += (hedef - simdi) / tavan(i)
     return 100 * eksik / len(cekirdek)
+
+
+def gunluksuz_sayisi(d):
+    """Olay günlüğünde karşılığı olmayan basamak sayısı (v1 göçü / elle yazım)."""
+    gunluktekiler = {o["id"] for o in (d.get("olaylar") or [])}
+    return sum(1 for k in d["items"] if k not in gunluktekiler)
 
 
 def sonraki_madde(m, d):
@@ -748,10 +799,13 @@ def cmd_bugun(m, d, _args):
             print(f"    · [{it['id']}] {it['lbl']} — {f['gun'] / 30.4:.1f} ay önce, "
                   f"~%{round(f['R'] * 100)} hatırlama")
 
-    kk = kestirim(m, d, 100 - genel_yuzde(m, d))
-    if kk.get("yeterli") and kk.get("p85"):
-        print(f"\n  KESTİRİM  %85 güvenle {kk['tarih85']} "
-              f"(P50 {kk['tarih50']}) — {kk['gozlem']} haftalık gözlemden")
+    kk = kestirim(m, d, max(0, son_kapi_yuzdesi(m) - genel_yuzde(m, d)))
+    if kk.get("bitti"):
+        print("\n  KESTİRİM  son kapı geçildi 🎉")
+    elif kk.get("yeterli") and kk.get("tarih85"):
+        print(f"\n  KESTİRİM  son kapıya (%{son_kapi_yuzdesi(m):.0f}) "
+              f"%85 güvenle {kk['tarih85']} (P50 {kk['tarih50']}) — "
+              f"{kk['gozlem']} haftalık gözlemden")
         if kk.get("zayif"):
             print("            zayıf temel: 10 haftadan az veriyle bu aralık 2–3 kat oynar")
     elif kk.get("neden"):

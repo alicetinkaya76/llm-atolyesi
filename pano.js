@@ -320,6 +320,7 @@
     k4.appendChild(el('div', 'ek', s.sessions + ' seans' +
       (s.daysSinceLast === 0 ? ' · bugün ✓' :
        s.daysSinceLast === 1 ? ' · dün' :
+       s.daysSinceLast < 0 ? ' · ileri tarihli kayıt' :
        s.daysSinceLast != null ? ' · ' + s.daysSinceLast + ' gün önce' : '')));
     r.appendChild(k4);
     pano.appendChild(r);
@@ -332,9 +333,14 @@
       kutu.appendChild(el('div', 'cizim', yor.svg));
 
       var k = yor.kestirim, metin;
-      if (k && k.yeterli && k.p50) {
+      if (k && k.bitti) {
+        metin = 'Son kapı geçildi 🎉 Kalan pay merdivenin 4. basamağı — ' +
+                'kapı şartı değil, isteğe bağlı derinleşme.';
+      } else if (k && k.yeterli && k.tarih50) {
         var p85 = (yor.gozlem >= 10 && k.tarih85)
           ? '%85 güvenle <b>' + A.esc(k.tarih85) + '</b>, ' : '';
+        /* p85 SINIR'a çarptıysa (tarih85 null) sessizce atlanır: 10 yıllık
+           ufukta olmayan bir şeye tarih basmak kesinlik izlenimi verir */
         metin = 'Son kapıya (%' + yor.sonKapi.toFixed(0) + ') ' + p85 +
           'yarı yarıya <b>' + A.esc(k.tarih50) + '</b> — ' + yor.gozlem + ' haftalık gözlemden.' +
           (yor.gozlem < 10
@@ -347,6 +353,14 @@
         metin = A.esc(k.neden) + ' Grafikte yalnız kapılar ve geçmiş var.';
       }
       if (metin) kutu.appendChild(el('div', 'kestirim-metin', metin));
+      if (s.gunluksuz) {
+        /* Geçmiş eğrisi olay günlüğünden yeniden oynatılıyor; günlüğü
+           olmayan basamaklar (eski şemadan göçmüş kayıtlar) geçmişte
+           görünmez. Ucu doğru, geçmişi eksik — bunu söylemek gerekiyor. */
+        kutu.appendChild(el('div', 'kestirim-metin',
+          s.gunluksuz + ' maddenin tarih kaydı yok (eski şemadan gelen kayıtlar), ' +
+          'bu yüzden eğrinin GEÇMİŞİ olduğundan düşük görünüyor. Bugünkü değer doğru.'));
+      }
 
       /* sayılar tabloda: dar ekranda açık, geniş ekranda <details> içinde */
       var tabloHtml = '<div class="tblwrap">' + yorungeTablosu(muf, s, yor) + '</div>';
@@ -442,7 +456,15 @@
   window.addEventListener('resize', function () {
     if (!sonVeri) return;
     clearTimeout(zaman);
-    zaman = setTimeout(function () { panoCiz(sonVeri.muf, sonVeri.state, sonVeri.fromNetwork, sonVeri.taslakVar); }, 180);
+    zaman = setTimeout(function () {
+      /* panoCiz #pano'yu önce boşaltıyor; burada bir istisna panoyu kalıcı
+         olarak boş bırakırdı (açılıştaki .catch bu yolu kapsamıyor) */
+      try { panoCiz(sonVeri.muf, sonVeri.state, sonVeri.fromNetwork, sonVeri.taslakVar); }
+      catch (e) {
+        document.getElementById('pano').innerHTML =
+          '<p class="uyari">Pano yeniden çizilemedi: ' + A.esc(e && e.message ? e.message : e) + '</p>';
+      }
+    }, 180);
   });
 
   /* Defterdeki kaydedilmemiş taslağı da hesaba kat: yoksa ön sayfa sıfır

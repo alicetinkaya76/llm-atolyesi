@@ -332,8 +332,12 @@
   }
 
   function tazeleMadde(it) {
-    if (!A.tazele(state, it)) { toast('Bu maddede tazelenecek bir basamak yok.'); return; }
-    degistir(function () {}, it.id + ' tazelendi — saat bugünden başlıyor.');
+    if (!s.lvl(it.id)) { toast('Bu maddede tazelenecek bir basamak yok.'); return; }
+    /* Mutasyon degistir'in İÇİNDE olmalı: degistir önce anlık görüntü alır,
+       dışarıda değiştirirsek görüntü zaten tazelenmiş hâli içerir ve 'u'
+       hiçbir şey geri almaz (üstelik bir geri-al adımını da yer). */
+    degistir(function () { A.tazele(state, it); },
+             it.id + ' tazelendi — saat bugünden başlıyor. Geri almak için u.');
   }
 
   /* ---------------- günlük ---------------- */

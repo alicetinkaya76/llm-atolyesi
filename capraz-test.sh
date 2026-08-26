@@ -9,6 +9,13 @@
 # Yakaladığı gerçek hatalar (gerileme testi olarak duruyorlar):
 #  · Python round() bankacı yuvarlaması yapar (12.5→12), JS Math.round yukarı
 #    (→13). Yüzdeler bu yüzden ayrışıyordu; defter.py artık yuvarla() kullanır.
+#  · kapiEsikleri "en az biri tavanda" şartı için EN UCUZ maddeyi almalı;
+#    max kullanmak son kapıyı %84.2 yerine %88.3 gösteriyordu.
+#  · Kestirim hedefi %100 değil SON KAPI. Test iki tarafa da elle
+#    '100 - overallPct' verdiği için üretimdeki ayrışmayı göremiyordu.
+#  · SINIR'a çarpan yüzdelik (p85==520) tarih basıyordu; artık null.
+#  · Gelecek tarihli/sırasız olay: son kova kalan her şeyi yutar, böylece
+#    serinin son değeri her zaman overallPct'e eşittir.
 set -eu
 KOK="$(cd "$(dirname "$0")" && pwd)"
 cd "$KOK"
@@ -39,7 +46,9 @@ cat > "$ORNEK" <<'EOF'
             {"d":"2026-08-18","id":"f0b","n":3},
             {"d":"2026-08-24","id":"f1a","n":2},
             {"d":"BOZUK","id":"f0c","n":3},
-            {"d":"2026-08-25","id":"yokBoyleMadde","n":2}],
+            {"d":"2026-08-25","id":"yokBoyleMadde","n":2},
+            {"d":"2027-03-01","id":"f2a","n":3},
+            {"d":"2026-07-20","id":"f0e","n":3}],
  "journal":[{"id":"a","date":"2026-08-10","hours":2,"phase":"z"},
             {"id":"b","date":"2026-08-24","hours":3,"phase":"z"},
             {"id":"c","date":"2026-08-25","hours":4,"phase":"f0"},
@@ -75,6 +84,15 @@ print('kestirim', str(kk.get('yeterli')).lower(), kk.get('gozlem'), kk.get('p50'
 print('kapiya-f1', round(mod.kapiya_kalan_yuzde(m, d, 'f1'), 4))
 kg = mod.kapi_gecmisi(m, d) or {}
 print('kapilar', ' '.join(f"{k}:{v['tarih']}:{v['pct']}" for k, v in sorted(kg.items())))
+print('esikler', ' '.join(f"{e['id']}:{e['pct']:.2f}" for e in mod.kapi_esikleri(m)))
+# ÜRETİMDEKİ çağrının aynısı: hedef son kapı, %100 değil
+hedef = max(0, mod.son_kapi_yuzdesi(m) - mod.genel_yuzde(m, d))
+kk2 = mod.kestirim(m, d, hedef, bugun)
+print('kestirim-gercek', kk2.get('p50', '-'), kk2.get('p85', '-'),
+      kk2.get('tarih85') or '-')
+seri2 = mod.ilerleme_serisi(m, d, 8, bugun) or []
+print('degismez-son', seri2[-1]['pct'] if seri2 else '-', mod.genel_yuzde(m, d))
+print('gunluksuz', mod.gunluksuz_sayisi(d))
 EOF
 
 node - "$ORNEK" "$BUGUN" > "$ORNEK.js" <<'EOF'
@@ -105,6 +123,14 @@ console.log('kestirim', kk.yeterli, kk.gozlem, kk.p50 !== undefined ? kk.p50 : '
 console.log('kapiya-f1', s.kapiyaKalanYuzde('f1').toFixed(4));
 const kg = s.kapiGecmisi() || {};
 console.log('kapilar', Object.keys(kg).sort().map(k => k + ':' + kg[k].tarih + ':' + kg[k].pct).join(' '));
+console.log('esikler', s.kapiEsikleri().map(e => e.id + ':' + e.pct.toFixed(2)).join(' '));
+const sonKapi = (s.kapiEsikleri().slice(-1)[0] || { pct: 100 }).pct;
+const kk2 = s.kestirim(Math.max(0, sonKapi - s.overallPct));
+console.log('kestirim-gercek', kk2.p50 !== undefined ? kk2.p50 : '-',
+            kk2.p85 !== undefined ? kk2.p85 : '-', kk2.tarih85 || '-');
+const seri2 = s.ilerlemeSerisi(8) || [];
+console.log('degismez-son', seri2.length ? seri2[seri2.length - 1].pct : '-', s.overallPct);
+console.log('gunluksuz', s.gunluksuz);
 EOF
 
 if diff -u "$ORNEK.py" "$ORNEK.js" > /dev/null; then

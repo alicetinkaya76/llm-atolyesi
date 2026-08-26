@@ -217,9 +217,20 @@
     if (n === oncekiN) return false;
     if (n === 0) delete state.items[it.id];
     else state.items[it.id] = { n: n, t: gun };
-    if (!Array.isArray(state.olaylar)) state.olaylar = [];
-    state.olaylar.push({ d: gun, id: it.id, n: n });
+    olayEkle(state, { d: gun, id: it.id, n: n });
     return true;
+  }
+
+  /* Günlüğe ekle ve SIRALI tut. ilerlemeSerisi tek yönlü bir imleçle
+     yürüdüğü için sıra bozulursa sonraki olaylar hiç tüketilmez: bir
+     gelecek tarihli kayıt (saat kayması, elle düzenleme) o oturumda
+     grafiği olduğu yerde dondurur. */
+  function olayEkle(state, olay) {
+    if (!Array.isArray(state.olaylar)) state.olaylar = [];
+    state.olaylar.push(olay);
+    state.olaylar.sort(function (a, b) {
+      return a.d === b.d ? 0 : (a.d < b.d ? -1 : 1);
+    });
   }
 
   /* Aynı basamağı yeniden onayla ("tazeledim"): sayı değişmez, saat sıfırlanır.
@@ -230,8 +241,7 @@
     if (!n) return false;
     var gun = bugun || todayLocal();
     state.items[it.id] = { n: n, t: gun };
-    if (!Array.isArray(state.olaylar)) state.olaylar = [];
-    state.olaylar.push({ d: gun, id: it.id, n: n });
+    olayEkle(state, { d: gun, id: it.id, n: n });
     return true;
   }
 
@@ -407,6 +417,15 @@
        yoksa geçmiş de YOKTUR — düz bir çizgi uydurmak yerine null döner. */
     var olaylar = (state && state.olaylar) || [];
 
+    /* Günlükte karşılığı OLMAYAN basamaklar (v1'den göçmüş ya da elle
+       yazılmış kayıtlar). Geçmiş eğrisi bunları bilemez; sayısını dışarı
+       veriyoruz ki arayüz eksikliği söyleyebilsin. */
+    var gunluktekiler = {};
+    olaylar.forEach(function (o) { gunluktekiler[o.id] = true; });
+    var gunluksuz = Object.keys(lvlMap).filter(function (id) {
+      return !gunluktekiler[id];
+    }).length;
+
     function ilerlemeSerisi(haftaSayisi) {
       if (!olaylar.length) return null;
       var coreItems = items.filter(function (i) { return i.core; });
@@ -421,9 +440,14 @@
       }
 
       var seviye = {}, oi = 0, cikti = [];
-      sinirlar.forEach(function (son) {
+      sinirlar.forEach(function (son, si) {
         var sonKey = todayLocal(son);
-        while (oi < olaylar.length && olaylar[oi].d <= sonKey) {
+        /* SON kova kalan HER ŞEYİ yutar. Gelecek tarihli bir kayıt (saat
+           kayması, elle düzenleme) aksi hâlde seriye hiç girmez ve grafiğin
+           son noktası "buradasın" noktasından sapar. Değişmez: serinin son
+           değeri her zaman overallPct'e eşittir. */
+        var sonKova = (si === sinirlar.length - 1);
+        while (oi < olaylar.length && (sonKova || olaylar[oi].d <= sonKey)) {
           var o = olaylar[oi];
           if (o.n > 0) seviye[o.id] = o.n; else delete seviye[o.id];
           oi++;
@@ -438,6 +462,11 @@
           pct: Math.round(100 * s / coreItems.length)
         });
       });
+      /* SON NOKTA YETKİLİDİR. Günlük eksikse (v1 göçü, elle düzenleme)
+         yeniden oynatma bugünü olduğundan düşük gösterir; grafiğin ucu ile
+         manşet sayının çelişmesi kabul edilemez. Eksiklik gizlenmiyor:
+         `gunluksuz` sayısı dışarı veriliyor ve arayüz not düşüyor. */
+      if (cikti.length) cikti[cikti.length - 1].pct = overallPct;
       return cikti;
     }
 
@@ -519,6 +548,12 @@
 
     var KESTIRIM_ASGARI = 5;
     var KESTIRIM_PENCERE = 20;   /* yalnız son 20 hafta: eski veri bayatlar */
+    /* PRATİK UFUK: 2 yıl. Bunun ötesine tarih basmak anlamsız — kişisel bir
+       öğrenme planında "2035-07-29" bir kestirim değil, sahte kesinliktir.
+       Ayrıca ortalama hızla ufka sığmayan durumları simülasyona hiç
+       sokmuyoruz: seyrek ilerlemede simülasyon 1.4 saniye sürüyordu ve
+       sonucu zaten "öngörülemez"di. */
+    var KESTIRIM_UFUK = 104;
 
     function kestirim(kalanYuzde, secenek) {
       secenek = secenek || {};
@@ -539,6 +574,13 @@
                  neden: 'Son ' + ham.length + ' haftada ölçülebilir ilerleme yok.' };
       }
 
+      /* ucuz ön eleme: ortalama hızla bile ufka sığmıyorsa simüle etme */
+      var ortalama = toplam / ham.length;
+      if (kalanYuzde / ortalama > KESTIRIM_UFUK) {
+        return { yeterli: false, gozlem: ham.length, durgun: true,
+                 neden: 'Bu hızda iki yıllık ufukta öngörülebilir bir tarih çıkmıyor.' };
+      }
+
       var rnd = tohumluRastgele(secenek.tohum || 42);
       var DENEME = 10000, SINIR = 520;   /* 10 yıl = pratik sonsuz */
       var sonuc = new Array(DENEME);
@@ -556,9 +598,9 @@
       var p50 = p(0.50), p85 = p(0.85), p95 = p(0.95);
       /* Tavana çarptıysak tarih basmak yanıltıcı olur ("2036" gibi bir sayı
          kesinlik izlenimi verir). Bunun yerine hızın yetersiz olduğunu söyle. */
-      if (p50 >= SINIR) {
+      if (p50 > KESTIRIM_UFUK) {
         return { yeterli: false, gozlem: ham.length, durgun: true,
-                 neden: 'Bu hızda öngörülebilir bir bitiş tarihi çıkmıyor.' };
+                 neden: 'Bu hızda iki yıllık ufukta öngörülebilir bir tarih çıkmıyor.' };
       }
       return {
         yeterli: true,
@@ -567,8 +609,13 @@
            Ölçüm: n=12'de P50 tahmininin kendi aralığı hâlâ ~2.6 kat. */
         zayif: ham.length < 10,
         p50: p50, p85: p85, p95: p95,
-        tarih50: haftaSonra(p50), tarih85: haftaSonra(p85),
-        tarih95: p95 < SINIR ? haftaSonra(p95) : null
+        /* SINIR'a çarpan yüzdelik "10 yıllık ufukta yok" demektir; ona tarih
+           basmak tam da kaçınmak istediğimiz kesinlik izlenimini üretir.
+           Ölçüldü: p50<SINIR ama p85==SINIR olan gerçekçi girdiler var
+           (on haftada bir verimli hafta), yani yalnız p95'i korumak yetmiyor. */
+        tarih50: p50 <= KESTIRIM_UFUK ? haftaSonra(p50) : null,
+        tarih85: p85 <= KESTIRIM_UFUK ? haftaSonra(p85) : null,
+        tarih95: p95 <= KESTIRIM_UFUK ? haftaSonra(p95) : null
       };
     }
 
@@ -594,12 +641,18 @@
         var fazCore = core.filter(function (i) { return i.p === p.id; });
         if (!fazCore.length) return;
         /* kapı şartı: hepsi eşikte + en az biri tavanda */
-        var pay = 0, enIyi = 0;
+        /* Eşik, kapının SAĞLANABİLECEĞİ EN DÜŞÜK yüzdedir. "En az biri
+           tavanda" şartı için EN UCUZ maddeyi tavana çıkarmak yeterlidir —
+           en pahalısını değil. (max kullanmak eşiği şişiriyordu: son kapı
+           %88.3 çıkıyor ama gerçek değer %84.2; kapı işareti kendi
+           çizgisinin altında kalıyordu.) Eşiği zaten tavanda olan bir madde
+           varsa ek maliyet sıfırdır. */
+        var pay = 0, enUcuz = Infinity;
         fazCore.forEach(function (i) {
           pay += passLevel(i) / itemMax(i);
-          enIyi = Math.max(enIyi, 1 - passLevel(i) / itemMax(i));
+          enUcuz = Math.min(enUcuz, 1 - passLevel(i) / itemMax(i));
         });
-        pay += enIyi;   /* biri tavana çıkarsa eklenecek fark */
+        pay += isFinite(enUcuz) ? enUcuz : 0;
         toplam += pay;
         out.push({ id: p.id, tag: p.tag, pct: 100 * toplam / core.length });
       });
@@ -644,6 +697,7 @@
       weekStreak: weekStreak,
       heatmap: heatmap,
       byWeekday: byWeekday,
+      gunluksuz: gunluksuz,
       ilerlemeSerisi: ilerlemeSerisi,
       kapiGecmisi: kapiGecmisi,
       kapiEsikleri: kapiEsikleri,

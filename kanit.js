@@ -156,12 +156,22 @@
       return Promise.resolve({ hata: 'kota', fazlar: {} });
     }
     return topla(muf).then(function (veri) {
-      onbellekYaz(veri);
+      /* bir faz bile 'bilinmiyor' döndüyse bunu yarım saat kalıcılaştırma */
+      var eksik = Object.keys(veri.fazlar).some(function (id) {
+        return veri.fazlar[id].commit === null;
+      });
+      if (!eksik) onbellekYaz(veri);
       veri.kaynak = 'canlı';
       veri.yasDk = 0;
       return veri;
     }).catch(function (e) {
-      if (onb) { onb.kaynak = 'önbellek (ağ yok)'; onb.hata = e.kota ? 'kota' : 'ag'; return onb; }
+      if (onb) {
+        /* Elde GEÇERLİ veri var; tazeleyemedik diye onu 'okunmadı' saymak
+           K0/K1 ayrımını çökertir. `hata` YAZMIYORUZ — ayrı alan. */
+        onb.kaynak = e.kota ? 'önbellek (kota)' : 'önbellek (ağ yok)';
+        onb.tazelenemedi = e.kota ? 'kota' : 'ag';
+        return onb;
+      }
       return { hata: e.kota ? 'kota' : 'ag', fazlar: {} };
     });
   }
