@@ -73,6 +73,8 @@ print('kuyruk', ' '.join(i['id'] for i, _ in mod.tazeleme_kuyrugu(m, d, 3, bugun
 kk = mod.kestirim(m, d, 100 - mod.genel_yuzde(m, d), bugun)
 print('kestirim', str(kk.get('yeterli')).lower(), kk.get('gozlem'), kk.get('p50', '-'), kk.get('p85', '-'), kk.get('p95', '-'))
 print('kapiya-f1', round(mod.kapiya_kalan_yuzde(m, d, 'f1'), 4))
+kg = mod.kapi_gecmisi(m, d) or {}
+print('kapilar', ' '.join(f"{k}:{v['tarih']}:{v['pct']}" for k, v in sorted(kg.items())))
 EOF
 
 node - "$ORNEK" "$BUGUN" > "$ORNEK.js" <<'EOF'
@@ -101,6 +103,8 @@ const kk = s.kestirim(100 - s.overallPct);
 console.log('kestirim', kk.yeterli, kk.gozlem, kk.p50 !== undefined ? kk.p50 : '-',
             kk.p85 !== undefined ? kk.p85 : '-', kk.p95 !== undefined ? kk.p95 : '-');
 console.log('kapiya-f1', s.kapiyaKalanYuzde('f1').toFixed(4));
+const kg = s.kapiGecmisi() || {};
+console.log('kapilar', Object.keys(kg).sort().map(k => k + ':' + kg[k].tarih + ':' + kg[k].pct).join(' '));
 EOF
 
 if diff -u "$ORNEK.py" "$ORNEK.js" > /dev/null; then

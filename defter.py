@@ -303,6 +303,39 @@ def ilerleme_serisi(m, d, hafta_sayisi, bugun=None):
     return cikti
 
 
+
+def kapi_gecmisi(m, d):
+    """Her fazın kapısının İLK geçildiği gün + o andaki çekirdek yüzdesi."""
+    olaylar = d.get("olaylar") or []
+    if not olaylar:
+        return None
+    cekirdek = [i for i in m["items"] if i.get("core")]
+    if not cekirdek:
+        return None
+    seviye, sonuc = {}, {}
+    kalan = {p["id"]: True for p in m["phases"]}
+
+    def kapi_acik(pid):
+        core = [i for i in m["items"] if i["p"] == pid and i.get("core")]
+        if not core:
+            return False
+        return (all(seviye.get(i["id"], 0) >= gecis_esigi(i) for i in core)
+                and any(seviye.get(i["id"], 0) >= tavan(i) for i in core))
+
+    for o in olaylar:
+        if o["n"] > 0:
+            seviye[o["id"]] = o["n"]
+        else:
+            seviye.pop(o["id"], None)
+        toplam = sum(min(seviye.get(i["id"], 0), tavan(i)) / tavan(i) for i in cekirdek)
+        pct = yuvarla(100 * toplam / len(cekirdek))
+        for ph in m["phases"]:
+            if kalan[ph["id"]] and kapi_acik(ph["id"]):
+                sonuc[ph["id"]] = {"tarih": o["d"], "pct": pct}
+                kalan[ph["id"]] = False
+    return sonuc
+
+
 def haftalik_kazanc(m, d, hafta_sayisi=12, bugun=None):
     """Haftalık çekirdek-yüzde kazancı; içinde bulunulan yarım hafta hariç.
     Başlamadan ÖNCEKİ haftalar gözlem sayılmaz — yoksa hiç çalışılmamış
@@ -528,9 +561,9 @@ def cmd_liste(m, d, args):
         print(f"\n{p['tag']} — {p['name']}")
         for it in faz_maddeleri(m, p["id"]):
             adlar = basamak_adlari(m, it)
-            sev = sev(d, it["id"])
+            basamak = sev(d, it["id"])
             isaret = "Ç" if it.get("core") else " "
-            print(f"  [{it['id']:<4}] {isaret} {sev}/{tavan(it)} {adlar[sev]:<22} {it['lbl']}")
+            print(f"  [{it['id']:<4}] {isaret} {basamak}/{tavan(it)} {adlar[basamak]:<22} {it['lbl']}")
     print()
 
 
@@ -550,6 +583,32 @@ def cmd_seviye(m, d, args):
     if kapi == "GEÇİLDİ":
         print(f"🎉 {faz_adi(m, it['p'])} kapısı GEÇİLDİ.")
     belki_yayinla(m, d, args, f"defter: {args.madde} → {args.basamak} ({adlar[args.basamak]})")
+
+
+def cmd_tazele(m, d, args):
+    """Aynı basamağı yeniden onayla: saat sıfırlanır, basamak değişmez."""
+    if args.madde:
+        it = m["by_id"].get(args.madde)
+        if it is None:
+            sys.exit(f"HATA: bilinmeyen madde '{args.madde}'.")
+        if not tazele_madde(d, it):
+            sys.exit(f"HATA: {args.madde} için atanmış bir basamak yok.")
+        durum_kaydet(d)
+        print(f"{it['lbl']} tazelendi — saat bugünden başlıyor.")
+        belki_yayinla(m, d, args, f"tazele: {args.madde}")
+        return
+    # argümansız: öneri listesi
+    kuyruk = tazeleme_kuyrugu(m, d, 5)
+    if not kuyruk:
+        print("\nTazelenecek madde yok — hiçbiri yarılanma süresini geçmemiş.\n")
+        return
+    print("\n🔁 Tazeleme önerisi (yarılanma süresini geçmiş maddeler):\n")
+    for it, f in kuyruk:
+        print(f"  [{it['id']:<4}] {it['lbl']}")
+        print(f"          {f['gun'] / 30.4:.1f} ay önce · tahmini hatırlama %{round(f['R'] * 100)}"
+              f" · yarılanma {f['yarilanmaGun'] / 30.4:.1f} ay")
+        print(f"          yeniden türetebildiysen:  atolye tazele {it['id']} -y")
+    print()
 
 
 def cmd_seans(m, d, args):
@@ -650,15 +709,15 @@ def cmd_bugun(m, d, _args):
         print("Tüm çekirdek maddeler eşiği geçti. 🎉 Kalanlar seçmeli.\n")
     else:
         adlar = basamak_adlari(m, it)
-        sev = sev(d, it["id"])
+        basamak = sev(d, it["id"])
         hedef = gecis_esigi(it)
         print(f"  SIRADAKİ  [{it['id']}] {it['lbl']}")
-        print(f"            şu an: {adlar[sev]}  →  hedef: {adlar[hedef]}")
+        print(f"            şu an: {adlar[basamak]}  →  hedef: {adlar[hedef]}")
         if it.get("hint"):
             print(f"            ipucu: {it['hint']}")
         sayfa = faz_sayfasi(it["p"])
         print(f"            plan:  {sayfa}")
-        print(f"            işle:  python3 defter.py seviye {it['id']} {sev + 1} -y")
+        print(f"            işle:  atolye seviye {it['id']} {basamak + 1} -y")
 
     hedef_saat = 9.0
     bu = bu_hafta_saat(d)
@@ -681,6 +740,22 @@ def cmd_bugun(m, d, _args):
             pass
     else:
         print("  SON SEANS yok — ilk seansı bugün aç.")
+
+    kuyruk = tazeleme_kuyrugu(m, d, 2)
+    if kuyruk:
+        print("\n  TAZELEME  (yarılanmayı geçti)")
+        for it, f in kuyruk:
+            print(f"    · [{it['id']}] {it['lbl']} — {f['gun'] / 30.4:.1f} ay önce, "
+                  f"~%{round(f['R'] * 100)} hatırlama")
+
+    kk = kestirim(m, d, 100 - genel_yuzde(m, d))
+    if kk.get("yeterli") and kk.get("p85"):
+        print(f"\n  KESTİRİM  %85 güvenle {kk['tarih85']} "
+              f"(P50 {kk['tarih50']}) — {kk['gozlem']} haftalık gözlemden")
+        if kk.get("zayif"):
+            print("            zayıf temel: 10 haftadan az veriyle bu aralık 2–3 kat oynar")
+    elif kk.get("neden"):
+        print(f"\n  KESTİRİM  yok — {kk['neden']}")
 
     acik = [e for e in d["journal"] if e.get("anlamadim")]
     if acik:
@@ -786,6 +861,10 @@ def main():
     p.add_argument("--yarin", default="")
     p.add_argument("-y", "--yayinla", action="store_true", help="kaydet + commit + push")
 
+    p = alt.add_parser("tazele", help="maddeyi yeniden onayla (argümansız: öneri listesi)")
+    p.add_argument("madde", nargs="?")
+    p.add_argument("-y", "--yayinla", action="store_true", help="kaydet + commit + push")
+
     p = alt.add_parser("yayinla", help="durum.json commit + push")
     p.add_argument("-m", "--mesaj", default="")
 
@@ -800,7 +879,7 @@ def main():
     d = durum_yukle(m)
     {"durum": cmd_durum, "bugun": cmd_bugun, "rapor": cmd_rapor,
      "liste": cmd_liste, "seviye": cmd_seviye, "seans": cmd_seans,
-     "yayinla": cmd_yayinla,
+     "tazele": cmd_tazele, "yayinla": cmd_yayinla,
      "ice-aktar": cmd_ice_aktar}[args.komut](m, d, args)
 
 if __name__ == "__main__":

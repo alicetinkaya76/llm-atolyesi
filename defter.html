@@ -89,6 +89,15 @@
   .lvls button.hit { background: var(--pc); border-color: var(--pc); color: #fff; }
   .lvls button.hit.inkdark { color: var(--badge-ink-dark); }
   .lvlname { font-family: "IBM Plex Mono", monospace; font-size: 0.66rem; color: var(--muted); margin-top: 0.2rem; }
+  .tazelik.soluyor { color: var(--muted); }
+  .tazelik.yarilanma { color: var(--warn); }
+  .tazele-dugme {
+    font-family: "IBM Plex Mono", monospace; font-size: 0.6rem;
+    margin-left: 0.5rem; padding: 0.15em 0.55em; border-radius: 999px;
+    border: 1px solid var(--warn); background: transparent; color: var(--warn); cursor: pointer;
+  }
+  .tazele-dugme:hover { background: var(--warn); color: var(--bg); }
+  .tazele-dugme:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   /* günlük */
   .jform { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 0.9rem 1.05rem; }

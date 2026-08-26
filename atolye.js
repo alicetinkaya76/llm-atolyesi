@@ -417,6 +417,37 @@
       return cikti;
     }
 
+    /* Her fazın kapısının İLK geçildiği gün + o andaki çekirdek yüzdesi.
+       Olay günlüğü yeniden oynatılarak bulunur; günlük yoksa null. */
+    function kapiGecmisi() {
+      if (!olaylar.length) return null;
+      var coreItems = items.filter(function (i) { return i.core; });
+      if (!coreItems.length) return null;
+      var seviye = {}, sonuc = {}, kalan = {};
+      (phases || []).forEach(function (p) { kalan[p.id] = true; });
+
+      function kapiAcikMi(pid) {
+        var core = items.filter(function (i) { return i.p === pid && i.core; });
+        if (!core.length) return false;
+        var hepsi = core.every(function (i) { return (seviye[i.id] || 0) >= passLevel(i); });
+        var biri = core.some(function (i) { return (seviye[i.id] || 0) >= itemMax(i); });
+        return hepsi && biri;
+      }
+      olaylar.forEach(function (o) {
+        if (o.n > 0) seviye[o.id] = o.n; else delete seviye[o.id];
+        var s = 0;
+        coreItems.forEach(function (it) { s += Math.min(seviye[it.id] || 0, itemMax(it)) / itemMax(it); });
+        var pct = Math.round(100 * s / coreItems.length);
+        (phases || []).forEach(function (p) {
+          if (kalan[p.id] && kapiAcikMi(p.id)) {
+            sonuc[p.id] = { tarih: o.d, pct: pct };
+            kalan[p.id] = false;
+          }
+        });
+      });
+      return sonuc;
+    }
+
     /* Haftalık çekirdek-yüzde kazancı: kestirimin ham girdisi.
        Yalnızca GEÇMİŞ (tamamlanmış) haftalar sayılır; içinde bulunulan
        yarım hafta hızı olduğundan düşük gösterir. */
@@ -563,6 +594,7 @@
       heatmap: heatmap,
       byWeekday: byWeekday,
       ilerlemeSerisi: ilerlemeSerisi,
+      kapiGecmisi: kapiGecmisi,
       tazelik: tazelik,
       tazelemeKuyrugu: tazelemeKuyrugu,
       kestirim: kestirim,

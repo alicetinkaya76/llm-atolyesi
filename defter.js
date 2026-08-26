@@ -280,7 +280,31 @@
     r1.appendChild(lv);
     row.appendChild(r1);
     if (it.hint) row.appendChild(el('div', 'hint', esc(it.hint)));
-    row.appendChild(el('div', 'lvlname', esc(adlar[s.lvl(it.id)] || '')));
+
+    var alt = el('div', 'lvlname');
+    alt.innerHTML = esc(adlar[s.lvl(it.id)] || '');
+    var f = s.tazelik(it.id);
+    if (f && !f.bilinmiyor && f.durum !== 'taze') {
+      var ay = (f.gun / 30.4).toFixed(1);
+      var et = el('span', 'tazelik ' + f.durum);
+      et.textContent = ' · ' + ay + ' ay önce, ~%' + Math.round(f.R * 100) + ' hatırlama';
+      et.title = f.durum === 'yarilanma'
+        ? 'Yarılanma süresini (' + (f.yarilanmaGun / 30.4).toFixed(1) + ' ay) geçti. ' +
+          'Yeniden türetmeyi dene; hâlâ yazabiliyorsan tazele.'
+        : 'Solmaya başladı; henüz acil değil.';
+      alt.appendChild(et);
+      if (f.durum === 'yarilanma') {
+        var tb = el('button', 'tazele-dugme', 'tazele');
+        tb.title = 'Bugün yeniden türettim — saati sıfırla (basamak değişmez)';
+        tb.addEventListener('click', function (ev) {
+          ev.stopPropagation();
+          siraliMaddeler.forEach(function (x, i) { if (x.id === it.id) odakIndex = i; });
+          tazeleMadde(it);
+        });
+        alt.appendChild(tb);
+      }
+    }
+    row.appendChild(alt);
     return row;
   }
 
@@ -296,6 +320,11 @@
     } else {
       toast(it.id + ' → ' + adlar[yeni]);
     }
+  }
+
+  function tazeleMadde(it) {
+    if (!A.tazele(state, it)) { toast('Bu maddede tazelenecek bir basamak yok.'); return; }
+    degistir(function () {}, it.id + ' tazelendi — saat bugünden başlıyor.');
   }
 
   /* ---------------- günlük ---------------- */
@@ -518,6 +547,10 @@
       seviyeAta(it, n);
     }
     else if (t === 'u') { ev.preventDefault(); geriAl(); }
+    else if (t === 't') {
+      if (odakIndex < 0) { toast('Önce bir maddeye gel (j / k).'); return; }
+      ev.preventDefault(); tazeleMadde(siraliMaddeler[odakIndex]);
+    }
     else if (t === 'n') { ev.preventDefault(); $('gunluk').scrollIntoView({ behavior: 'smooth' }); setTimeout(function () { $('j1').focus(); }, 300); }
     else if (t === '/') { ev.preventDefault(); paletAc(); }
     else if (t === '?') { ev.preventDefault(); yardimGoster(); }
@@ -531,7 +564,7 @@
     d.id = 'yardim';
     d.innerHTML =
       '<b>Klavye:</b> <kbd>j</kbd>/<kbd>k</kbd> madde gez · <kbd>0</kbd>–<kbd>4</kbd> basamak ata · ' +
-      '<kbd>u</kbd> geri al · <kbd>n</kbd> yeni seans · <kbd>⌘K</kbd> ya da <kbd>/</kbd> komut paleti · ' +
+      '<kbd>u</kbd> geri al · <kbd>t</kbd> tazele · <kbd>n</kbd> yeni seans · <kbd>⌘K</kbd> ya da <kbd>/</kbd> komut paleti · ' +
       '<kbd>g</kbd> başa dön · <kbd>?</kbd> bu yardımı kapat';
     $('banner-alani').appendChild(d);
   }
