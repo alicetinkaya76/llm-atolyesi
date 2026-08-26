@@ -6,7 +6,12 @@
   var A = window.Atolye;
 
   /* ---- service worker: çevrimdışı + telefona kurulum ---- */
-  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  /* Service worker YEREL geliştirmede kaydedilmez: varlıklar cache-first
+     servis edildiği için düzenlenen JS bir sonraki yüklemeye kadar eski
+     kalıyor ve bu, geliştirirken saatler yiyen bir yanılgı üretiyor
+     (bir kez yaşandı). Canlı sitede normal çalışır. */
+  var YEREL_MI = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0 && !YEREL_MI) {
     navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
       .then(function (reg) {
         reg.update();

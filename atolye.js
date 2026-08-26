@@ -142,6 +142,41 @@
     return out;
   }
 
+  /* ---------- TAZELİK (ustalık çürümesi) ----------
+     Model: FSRS-6'nın hatırlanabilirlik eğrisi — üstel DEĞİL, kuvvet yasası
+       R(t) = (1 + FACTOR * t / S) ^ DECAY,  DECAY = -0.1542
+     Bu parametrelendirmede S, hatırlamanın %90'a düştüğü süredir.
+     TUZAK: S bir YARILANMA ÖMRÜ DEĞİLDİR. %50'ye düşüş 90.355 * S'te olur;
+     ikisini karıştırmak 90 kat hata demektir.
+
+     Basamak → S0 eşlemesi FSRS'in kendi ilk-kararlılık ağırlıklarının
+     (w0..w3) biçiminden türetildi. Kalibrasyon şanslı biçimde tutuyor:
+     3. basamağın yarılanma ömrü 199 gün ≈ 6.6 ay, ki Tatel & Ackerman'ın
+     (2025, Psychological Bulletin; 1.344 etki büyüklüğü) prosedürel beceri
+     için ölçtüğü "kazanımın yarısı ~6.5 ayda kayboluyor" bulgusuyla
+     bağımsız olarak örtüşüyor.
+
+     EŞİK SEÇİMİ — bilinçli olarak GEVŞEK. Anki yığını üzerine yapılan
+     ankette (89 tıp öğrencisi) kullanıcıların %82'si aracı bunaltıcı,
+     %68'i kaygı verici buluyor ve %75'i eski tekrarları hiç yetiştiremiyor.
+     Bu yüzden burada "gecikmiş" diye bir kavram yok: bir madde ancak
+     YARILANMA ÖMRÜNÜ geçtiğinde öneri listesine girer (3. basamak için
+     ~6.6 ay), kuyruk en fazla 3 madde gösterir ve hiçbir sayaç birikmez. */
+  var FSRS_DECAY = -0.1542;
+  var FSRS_FACTOR = 0.9803464944134797;   /* 0.9^(1/DECAY) - 1 */
+  var YARILANMA_KAT = 90.355;             /* R=0.5 anı = KAT * S */
+  var S0 = [0, 0.5, 1.5, 2.2, 4.4];       /* basamak 0..4 → gün */
+
+  function hatirlanabilirlik(gun, s0) {
+    if (!(s0 > 0)) return null;
+    if (gun <= 0) return 1;
+    return Math.pow(1 + FSRS_FACTOR * gun / s0, FSRS_DECAY);
+  }
+  function yarilanmaGun(rung) {
+    var s0 = S0[Math.max(0, Math.min(rung, S0.length - 1))];
+    return s0 > 0 ? YARILANMA_KAT * s0 : null;
+  }
+
   /* ---------- yazma ----------
      Tek giriş noktası: basamak ataması hem izdüşümü (items) hem günlüğü
      (olaylar) birlikte yazar. İkisi ayrı yerlerden yazılırsa kaçınılmaz
@@ -308,6 +343,41 @@
       if (e.yarin && e.yarin.trim()) lastYarin = { metin: e.yarin.trim(), date: e.date };
     });
 
+    /* ---- tazelik ----
+       Her maddenin basamağı ne zaman kazanıldıysa oradan itibaren hesaplanır.
+       Tarihi bilinmeyen (v1'den göçmüş) maddeler için null döner: "bilmiyorum"
+       demek, uydurmaktan iyidir. */
+    function tazelik(id) {
+      var n = lvl(id);
+      if (!n) return null;
+      var t = lvlDate(id);
+      if (!t) return { n: n, bilinmiyor: true };
+      var d0 = parseDate(t);
+      if (!d0) return { n: n, bilinmiyor: true };
+      var gun = dayDiff(d0, new Date(SIMDI.getFullYear(), SIMDI.getMonth(), SIMDI.getDate()));
+      var yari = yarilanmaGun(n);
+      var R = hatirlanabilirlik(gun, S0[Math.min(n, S0.length - 1)]);
+      var durum = 'taze';
+      if (yari && gun >= yari) durum = 'yarilanma';
+      else if (yari && gun >= yari / 3) durum = 'soluyor';
+      return { n: n, gun: gun, R: R, yarilanmaGun: yari, durum: durum, tarih: t };
+    }
+
+    /* Tazeleme önerisi: YALNIZCA yarılanmayı geçmiş maddeler, en fazla `kac`
+       tane, en eskiden başlayarak. Kasıtlı olarak kısa: kuyruk büyüyüp borç
+       yığınına dönüşmesin. */
+    function tazelemeKuyrugu(kac) {
+      var out = [];
+      items.forEach(function (it) {
+        var f = tazelik(it.id);
+        if (f && !f.bilinmiyor && f.durum === 'yarilanma') {
+          out.push({ it: it, tazelik: f });
+        }
+      });
+      out.sort(function (a, b) { return b.tazelik.gun - a.tazelik.gun; });
+      return out.slice(0, kac || 3);
+    }
+
     /* ---- geçmiş: olay günlüğünü yeniden oynat ----
        Çekirdek yüzdesinin zaman içindeki seyri. Kaynak `olaylar`; günlük
        yoksa geçmiş de YOKTUR — düz bir çizgi uydurmak yerine null döner. */
@@ -353,11 +423,119 @@
     function haftalikKazanc(haftaSayisi) {
       var seri = ilerlemeSerisi((haftaSayisi || 12) + 1);
       if (!seri || seri.length < 2) return null;
+      /* Başlamadan ÖNCEKİ haftalar gözlem değildir: ilk olayın haftasından
+         geriye kalanları saymak, hiç çalışılmamış haftaları "sıfır hızlı
+         hafta" gibi gösterip kestirimi haksız yere karamsarlaştırır. */
+      var ilkOlay = olaylar.length ? olaylar[0].d : null;
       var out = [];
       for (var i = 1; i < seri.length - 1; i++) {   /* son eleman = bu hafta, atlanır */
+        if (ilkOlay && seri[i].son < ilkOlay) continue;
         out.push(Math.max(0, seri[i].pct - seri[i - 1].pct));
       }
       return out.length ? out : null;
+    }
+
+    /* ---- KESTİRİM ----
+       Yöntem: haftalık kazanç geçmişi üzerinden YERİNE KOYARAK yeniden
+       örnekleme (Monte Carlo bootstrap), 10.000 deneme. Ortalama hız
+       kullanılmaz: "ortalamaların yanılgısı" tek bir tarihi kesinlik gibi
+       sunar — ölçümde ortalama-hız tarihi gerçekte ancak %59 olasılıkla
+       tutuyor, yani gizli bir yazı-tura.
+
+       DÜRÜSTLÜK KAPISI: 5 gözlemin altında hiçbir tarih verilmez.
+       Sıra istatistiği bunu zorunlu kılıyor: n=5'te gözlenen en büyük değer
+       aynı anda hem P85 hem P95'tir, yani üst yüzdelikler bilgi taşımaz.
+       Ölçülen oynaklık: n=3'te P50 tahmini 15–83 hafta arasında savruluyor
+       (5.5 kat), n=12'de hâlâ ~2.6 kat, ancak n=20-30'da ~1.8 kata iniyor.
+       Yanlılık yok — sorun sapma değil VARYANS; bu yüzden "düzeltmek" değil,
+       söylememek doğru olan.
+
+       Rastgelelik tohumlu ve iki uygulamada aynı (mulberry32), böylece
+       Python ikizi birebir aynı sayıyı üretir ve çapraz test anlamlı olur. */
+    function tohumluRastgele(tohum) {
+      var a = tohum >>> 0;
+      return function () {
+        a = (a + 0x6D2B79F5) >>> 0;
+        var t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    var KESTIRIM_ASGARI = 5;
+    var KESTIRIM_PENCERE = 20;   /* yalnız son 20 hafta: eski veri bayatlar */
+
+    function kestirim(kalanYuzde, secenek) {
+      secenek = secenek || {};
+      var ham = haftalikKazanc(KESTIRIM_PENCERE);
+      if (!ham || ham.length < KESTIRIM_ASGARI) {
+        return {
+          yeterli: false,
+          gozlem: ham ? ham.length : 0,
+          gereken: KESTIRIM_ASGARI,
+          neden: 'Kestirim için en az ' + KESTIRIM_ASGARI + ' tamamlanmış hafta gerekiyor.'
+        };
+      }
+      if (!(kalanYuzde > 0)) return { yeterli: true, bitti: true, gozlem: ham.length };
+      /* hepsi sıfırsa asla bitmez — tarih uydurma */
+      var toplam = ham.reduce(function (a, b) { return a + b; }, 0);
+      if (toplam <= 0) {
+        return { yeterli: false, gozlem: ham.length, durgun: true,
+                 neden: 'Son ' + ham.length + ' haftada ölçülebilir ilerleme yok.' };
+      }
+
+      var rnd = tohumluRastgele(secenek.tohum || 42);
+      var DENEME = 10000, SINIR = 520;   /* 10 yıl = pratik sonsuz */
+      var sonuc = new Array(DENEME);
+      for (var d = 0; d < DENEME; d++) {
+        var kalan = kalanYuzde, hafta = 0;
+        while (kalan > 0 && hafta < SINIR) {
+          kalan -= ham[Math.floor(rnd() * ham.length)];
+          hafta++;
+        }
+        sonuc[d] = hafta;
+      }
+      sonuc.sort(function (a, b) { return a - b; });
+      /* en-yakın-sıra yüzdelik: indeks = ceil(p*n), 1-tabanlı */
+      function p(q) { return sonuc[Math.max(0, Math.ceil(q * DENEME) - 1)]; }
+      var p50 = p(0.50), p85 = p(0.85), p95 = p(0.95);
+      /* Tavana çarptıysak tarih basmak yanıltıcı olur ("2036" gibi bir sayı
+         kesinlik izlenimi verir). Bunun yerine hızın yetersiz olduğunu söyle. */
+      if (p50 >= SINIR) {
+        return { yeterli: false, gozlem: ham.length, durgun: true,
+                 neden: 'Bu hızda öngörülebilir bir bitiş tarihi çıkmıyor.' };
+      }
+      return {
+        yeterli: true,
+        gozlem: ham.length,
+        /* n<10 iken P85 hâlâ zayıf: bunu gizleme, işaretle.
+           Ölçüm: n=12'de P50 tahmininin kendi aralığı hâlâ ~2.6 kat. */
+        zayif: ham.length < 10,
+        p50: p50, p85: p85, p95: p95,
+        tarih50: haftaSonra(p50), tarih85: haftaSonra(p85),
+        tarih95: p95 < SINIR ? haftaSonra(p95) : null
+      };
+    }
+
+    function haftaSonra(n) {
+      if (!isFinite(n)) return null;
+      var b = weekStart(SIMDI);
+      var d = new Date(b.getFullYear(), b.getMonth(), b.getDate() + 7 * n + 6);
+      return todayLocal(d);
+    }
+
+    /* Bir fazın kapısına kalan çekirdek yüzdesi (genel yüzde biriminde) */
+    function kapiyaKalanYuzde(pid) {
+      var core = items.filter(function (i) { return i.core; });
+      if (!core.length) return 0;
+      var eksik = 0;
+      phaseItems(pid).forEach(function (i) {
+        if (!i.core) return;
+        var hedef = passLevel(i);
+        var simdi = Math.min(lvl(i.id), itemMax(i));
+        if (simdi < hedef) eksik += (hedef - simdi) / itemMax(i);
+      });
+      return 100 * eksik / core.length;
     }
 
     var dates = journal.map(function (e) { return e.date; }).filter(Boolean).sort();
@@ -385,6 +563,11 @@
       heatmap: heatmap,
       byWeekday: byWeekday,
       ilerlemeSerisi: ilerlemeSerisi,
+      tazelik: tazelik,
+      tazelemeKuyrugu: tazelemeKuyrugu,
+      kestirim: kestirim,
+      kapiyaKalanYuzde: kapiyaKalanYuzde,
+      haftaSonra: haftaSonra,
       haftalikKazanc: haftalikKazanc,
       byDay: byDay,
       sessions: journal.length,
@@ -479,6 +662,8 @@
     phasePage: phasePage,
     barColor: barColor,
     fmtHours: fmtHours,
+    hatirlanabilirlik: hatirlanabilirlik,
+    yarilanmaGun: yarilanmaGun,
     WEEK_TARGET: HAFTA_HEDEF
   };
 })(window);

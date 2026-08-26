@@ -66,6 +66,13 @@ print('z1tarih', mod.sev_tarih(d, 'z1') or '-', 'z3tarih', mod.sev_tarih(d, 'z3'
 seri = mod.ilerleme_serisi(m, d, 6, bugun) or []
 print('seri', ' '.join(f"{x['son']}:{x['pct']}" for x in seri))
 print('kazanc', ' '.join(str(v) for v in (mod.haftalik_kazanc(m, d, 5, bugun) or [])))
+tz = mod.tazelik(m, d, 'z1', bugun)
+print('tazelik-z1', tz['durum'], tz['gun'], round(tz['R'], 4))
+print('tazelik-z3', str((mod.tazelik(m, d, 'z3', bugun) or {}).get('bilinmiyor')).lower())
+print('kuyruk', ' '.join(i['id'] for i, _ in mod.tazeleme_kuyrugu(m, d, 3, bugun)))
+kk = mod.kestirim(m, d, 100 - mod.genel_yuzde(m, d), bugun)
+print('kestirim', str(kk.get('yeterli')).lower(), kk.get('gozlem'), kk.get('p50', '-'), kk.get('p85', '-'), kk.get('p95', '-'))
+print('kapiya-f1', round(mod.kapiya_kalan_yuzde(m, d, 'f1'), 4))
 EOF
 
 node - "$ORNEK" "$BUGUN" > "$ORNEK.js" <<'EOF'
@@ -86,6 +93,14 @@ console.log('z1tarih', s.lvlDate('z1') || '-', 'z3tarih', s.lvlDate('z3') || '-'
 const seri = s.ilerlemeSerisi(6) || [];
 console.log('seri', seri.map(x => x.son + ':' + x.pct).join(' '));
 console.log('kazanc', (s.haftalikKazanc(5) || []).join(' '));
+const tz = s.tazelik('z1');
+console.log('tazelik-z1', tz.durum, tz.gun, tz.R.toFixed(4));
+console.log('tazelik-z3', (s.tazelik('z3') || {}).bilinmiyor);
+console.log('kuyruk', s.tazelemeKuyrugu(3).map(x => x.it.id).join(' '));
+const kk = s.kestirim(100 - s.overallPct);
+console.log('kestirim', kk.yeterli, kk.gozlem, kk.p50 !== undefined ? kk.p50 : '-',
+            kk.p85 !== undefined ? kk.p85 : '-', kk.p95 !== undefined ? kk.p95 : '-');
+console.log('kapiya-f1', s.kapiyaKalanYuzde('f1').toFixed(4));
 EOF
 
 if diff -u "$ORNEK.py" "$ORNEK.js" > /dev/null; then

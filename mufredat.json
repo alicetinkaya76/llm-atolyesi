@@ -1,66 +1,388 @@
 {
   "v": 1,
   "levels": {
-    "yap": ["başlamadım", "bütünü gördüm", "kapalı kitap yazdım", "egzersiz/test yeşil", "Türkçe büküm + defter"],
-    "oku": ["başlamadım", "okudum", "deftere özetledim"]
+    "yap": [
+      "başlamadım",
+      "bütünü gördüm",
+      "kapalı kitap yazdım",
+      "egzersiz/test yeşil",
+      "Türkçe büküm + defter"
+    ],
+    "oku": [
+      "başlamadım",
+      "okudum",
+      "deftere özetledim"
+    ]
   },
   "phases": [
-    { "id": "z",  "tag": "ZEMİN", "name": "Python / PyTorch zemini", "color": "var(--fz)", "dark": false },
-    { "id": "f0", "tag": "FAZ 0", "name": "Karpathy sıfırdan serisi", "color": "var(--f0)", "dark": false },
-    { "id": "f1", "tag": "FAZ 1", "name": "Tokenizer + Türkçe", "color": "var(--f1)", "dark": false },
-    { "id": "f2", "tag": "FAZ 2", "name": "İlk gerçek pretraining", "color": "var(--f2)", "dark": false },
-    { "id": "f3", "tag": "FAZ 3", "name": "Derinlik: CS336", "color": "var(--f3)", "dark": true },
-    { "id": "f4", "tag": "FAZ 4", "name": "Post-training + eval", "color": "var(--f4)", "dark": true },
-    { "id": "f5", "tag": "FAZ 5", "name": "Capstone: nanochat + Türkçe model", "color": "var(--f5)", "dark": true }
+    {
+      "id": "z",
+      "tag": "ZEMİN",
+      "name": "Python / PyTorch zemini",
+      "color": "var(--fz)",
+      "dark": false,
+      "klasor": "zemin"
+    },
+    {
+      "id": "f0",
+      "tag": "FAZ 0",
+      "name": "Karpathy sıfırdan serisi",
+      "color": "var(--f0)",
+      "dark": false,
+      "klasor": "faz0"
+    },
+    {
+      "id": "f1",
+      "tag": "FAZ 1",
+      "name": "Tokenizer + Türkçe",
+      "color": "var(--f1)",
+      "dark": false,
+      "klasor": "faz1"
+    },
+    {
+      "id": "f2",
+      "tag": "FAZ 2",
+      "name": "İlk gerçek pretraining",
+      "color": "var(--f2)",
+      "dark": false,
+      "klasor": "faz2"
+    },
+    {
+      "id": "f3",
+      "tag": "FAZ 3",
+      "name": "Derinlik: CS336",
+      "color": "var(--f3)",
+      "dark": true,
+      "klasor": "faz3"
+    },
+    {
+      "id": "f4",
+      "tag": "FAZ 4",
+      "name": "Post-training + eval",
+      "color": "var(--f4)",
+      "dark": true,
+      "klasor": "faz4"
+    },
+    {
+      "id": "f5",
+      "tag": "FAZ 5",
+      "name": "Capstone: nanochat + Türkçe model",
+      "color": "var(--f5)",
+      "dark": true,
+      "klasor": "faz5"
+    }
   ],
   "items": [
-    { "id": "z1",  "p": "z",  "t": "yap", "max": 3, "core": true,  "lbl": "Tensor Puzzles — 21/21", "hint": "Colab'da; tek satır çözümler. L3 = tüm bulmacalar geçti." },
-    { "id": "z2",  "p": "z",  "t": "oku", "core": true,  "lbl": "PyTorch \"Learn the Basics\" (7 modül)" },
-    { "id": "z3",  "p": "z",  "t": "oku", "core": false, "lbl": "NumPy broadcasting sayfası" },
-    { "id": "z4",  "p": "z",  "t": "oku", "core": true,  "lbl": "nanoGPT model.py öz-testi", "hint": "L2 = açıklayamadığın satır kalmadı (Faz 0 sonunda tekrarla)." },
-
-    { "id": "f0a", "p": "f0", "t": "yap", "core": true, "lbl": "micrograd (ZtH 1)", "hint": "L4 = bilinçli bir gradyan hatası üretip autograd'ında yakala." },
-    { "id": "f0b", "p": "f0", "t": "yap", "core": true, "lbl": "makemore 1–5 (ZtH 2–6)" },
-    { "id": "f0c", "p": "f0", "t": "yap", "core": true, "lbl": "\"Let's build GPT\" (ZtH 7)" },
-    { "id": "f0d", "p": "f0", "t": "yap", "core": true, "lbl": "makemore Türkçe varyantı", "hint": "Türkçe isim/toponim listesiyle; ünlü uyumu gözlemini deftere yaz." },
-    { "id": "f0e", "p": "f0", "t": "yap", "max": 3, "core": true, "lbl": "microgpt kapalı-kitap sınavı", "hint": "~200 satırı boş dosyadan yeniden türet." },
-
-    { "id": "f1a", "p": "f1", "t": "yap", "core": true, "lbl": "Tokenizer videosu + minbpe exercise.md" },
-    { "id": "f1b", "p": "f1", "t": "yap", "core": true, "lbl": "Kendi korpusunda Türkçe BPE + fertility tablosu" },
-    { "id": "f1c", "p": "f1", "t": "yap", "core": false, "lbl": "HF Tokenizers (ch6) + SentencePiece BPE↔unigram" },
-    { "id": "f1d", "p": "f1", "t": "oku", "core": true, "lbl": "%TR / token saflığı makalesi (2502.07057)" },
-    { "id": "f1e", "p": "f1", "t": "oku", "core": false, "lbl": "Morfoloji-temelli hibrit tokenizer (2508.14292)" },
-    { "id": "f1f", "p": "f1", "t": "oku", "core": true, "lbl": "Altınok 2026 — optimal Türkçe subword (2602.06942)" },
-    { "id": "f1g", "p": "f1", "t": "yap", "max": 3, "core": false, "lbl": "zeyrek ile %TR ölçümü" },
-
-    { "id": "f2a", "p": "f2", "t": "yap", "core": true, "lbl": "Raschka kitabı bl. 1–5 (mimari)" },
-    { "id": "f2b", "p": "f2", "t": "yap", "core": true, "lbl": "Raschka bl. 5–7 (eğitim + fine-tune)" },
-    { "id": "f2c", "p": "f2", "t": "yap", "max": 3, "core": false, "lbl": "mlx-gpt2 — 10 dakikalık ilk koşu" },
-    { "id": "f2d", "p": "f2", "t": "yap", "core": true, "lbl": "mlx-pretrain ile mini model (~200M token)" },
-    { "id": "f2e", "p": "f2", "t": "yap", "max": 3, "core": true, "lbl": "build-nanogpt + ~$10 bulut GPT-2 124M", "hint": "İlk bulut GPU koşun; loss eğrisini sakla." },
-    { "id": "f2f", "p": "f2", "t": "oku", "core": true, "lbl": "Ölçekleme üçlemesi: Kaplan → Chinchilla → veri-kısıtlı" },
-    { "id": "f2g", "p": "f2", "t": "yap", "core": true, "lbl": "Türkçe char-LM (kendi korpusun, MLX)" },
-
-    { "id": "f3a", "p": "f3", "t": "yap", "core": true, "lbl": "CS336 A1 — tokenizer+transformer (testler yeşil)" },
-    { "id": "f3b", "p": "f3", "t": "yap", "max": 3, "core": false, "lbl": "CS336 A2 — Triton/DDP (bulut NVIDIA)" },
-    { "id": "f3c", "p": "f3", "t": "yap", "max": 3, "core": false, "lbl": "CS336 A3 — ölçekleme yasaları" },
-    { "id": "f3d", "p": "f3", "t": "yap", "core": true, "lbl": "CS336 A4 — veri küratörlüğü" },
-    { "id": "f3e", "p": "f3", "t": "yap", "max": 3, "core": false, "lbl": "CS336 A5 — alignment + RL" },
-    { "id": "f3f", "p": "f3", "t": "yap", "core": true, "lbl": "datatrove ile Türkçe slice pipeline'ı (dedup dahil)" },
-    { "id": "f3g", "p": "f3", "t": "oku", "core": false, "lbl": "Okuma rafı: Smol Playbook · OLMo 3 · Llama 3" },
-
-    { "id": "f4a", "p": "f4", "t": "yap", "core": true, "lbl": "Raschka bl.7 SFT + DPO defteri (from scratch)" },
-    { "id": "f4b", "p": "f4", "t": "yap", "core": true, "lbl": "TRL ile SFT + DPO koşusu" },
-    { "id": "f4c", "p": "f4", "t": "yap", "core": false, "lbl": "mlx-lm LoRA — Türkçe veride, cihazda" },
-    { "id": "f4d", "p": "f4", "t": "oku", "core": true, "lbl": "RLHF Book çekirdek bölümler" },
-    { "id": "f4e", "p": "f4", "t": "yap", "max": 3, "core": false, "lbl": "Reasoning kitabı — sıfırdan GRPO (bl. 5–7)" },
-    { "id": "f4f", "p": "f4", "t": "yap", "core": true, "lbl": "lm-eval-harness entegrasyonu + önce/sonra tablosu" },
-
-    { "id": "f5a", "p": "f5", "t": "yap", "core": true, "lbl": "nanochat kodu + Mac mini config" },
-    { "id": "f5b", "p": "f5", "t": "yap", "max": 3, "core": true, "lbl": "nanochat d20 speedrun (CORE skoru raporlu)" },
-    { "id": "f5c", "p": "f5", "t": "yap", "core": true, "lbl": "Türkçe veri slice — 1–10B token, dedup'lu" },
-    { "id": "f5d", "p": "f5", "t": "yap", "core": true, "lbl": "Türkçe model eğitimi (100–350M)" },
-    { "id": "f5e", "p": "f5", "t": "yap", "core": true, "lbl": "Cetvel eval + GGUF → kendi ollama'nda servis" },
-    { "id": "f5f", "p": "f5", "t": "yap", "max": 3, "core": false, "lbl": "Yayın rotası: BabyLM / Osmanlı-OTC kararı + taslak" }
+    {
+      "id": "z1",
+      "p": "z",
+      "t": "yap",
+      "max": 3,
+      "core": true,
+      "lbl": "Tensor Puzzles — 21/21",
+      "hint": "Colab'da; tek satır çözümler. L3 = tüm bulmacalar geçti."
+    },
+    {
+      "id": "z2",
+      "p": "z",
+      "t": "oku",
+      "core": true,
+      "lbl": "PyTorch \"Learn the Basics\" (7 modül)"
+    },
+    {
+      "id": "z3",
+      "p": "z",
+      "t": "oku",
+      "core": false,
+      "lbl": "NumPy broadcasting sayfası"
+    },
+    {
+      "id": "z4",
+      "p": "z",
+      "t": "oku",
+      "core": true,
+      "lbl": "nanoGPT model.py öz-testi",
+      "hint": "L2 = açıklayamadığın satır kalmadı (Faz 0 sonunda tekrarla)."
+    },
+    {
+      "id": "f0a",
+      "p": "f0",
+      "t": "yap",
+      "core": true,
+      "lbl": "micrograd (ZtH 1)",
+      "hint": "L4 = bilinçli bir gradyan hatası üretip autograd'ında yakala."
+    },
+    {
+      "id": "f0b",
+      "p": "f0",
+      "t": "yap",
+      "core": true,
+      "lbl": "makemore 1–5 (ZtH 2–6)"
+    },
+    {
+      "id": "f0c",
+      "p": "f0",
+      "t": "yap",
+      "core": true,
+      "lbl": "\"Let's build GPT\" (ZtH 7)"
+    },
+    {
+      "id": "f0d",
+      "p": "f0",
+      "t": "yap",
+      "core": true,
+      "lbl": "makemore Türkçe varyantı",
+      "hint": "Türkçe isim/toponim listesiyle; ünlü uyumu gözlemini deftere yaz."
+    },
+    {
+      "id": "f0e",
+      "p": "f0",
+      "t": "yap",
+      "max": 3,
+      "core": true,
+      "lbl": "microgpt kapalı-kitap sınavı",
+      "hint": "~200 satırı boş dosyadan yeniden türet."
+    },
+    {
+      "id": "f1a",
+      "p": "f1",
+      "t": "yap",
+      "core": true,
+      "lbl": "Tokenizer videosu + minbpe exercise.md"
+    },
+    {
+      "id": "f1b",
+      "p": "f1",
+      "t": "yap",
+      "core": true,
+      "lbl": "Kendi korpusunda Türkçe BPE + fertility tablosu"
+    },
+    {
+      "id": "f1c",
+      "p": "f1",
+      "t": "yap",
+      "core": false,
+      "lbl": "HF Tokenizers (ch6) + SentencePiece BPE↔unigram"
+    },
+    {
+      "id": "f1d",
+      "p": "f1",
+      "t": "oku",
+      "core": true,
+      "lbl": "%TR / token saflığı makalesi (2502.07057)"
+    },
+    {
+      "id": "f1e",
+      "p": "f1",
+      "t": "oku",
+      "core": false,
+      "lbl": "Morfoloji-temelli hibrit tokenizer (2508.14292)"
+    },
+    {
+      "id": "f1f",
+      "p": "f1",
+      "t": "oku",
+      "core": true,
+      "lbl": "Altınok 2026 — optimal Türkçe subword (2602.06942)"
+    },
+    {
+      "id": "f1g",
+      "p": "f1",
+      "t": "yap",
+      "max": 3,
+      "core": false,
+      "lbl": "zeyrek ile %TR ölçümü"
+    },
+    {
+      "id": "f2a",
+      "p": "f2",
+      "t": "yap",
+      "core": true,
+      "lbl": "Raschka kitabı bl. 1–5 (mimari)"
+    },
+    {
+      "id": "f2b",
+      "p": "f2",
+      "t": "yap",
+      "core": true,
+      "lbl": "Raschka bl. 5–7 (eğitim + fine-tune)"
+    },
+    {
+      "id": "f2c",
+      "p": "f2",
+      "t": "yap",
+      "max": 3,
+      "core": false,
+      "lbl": "mlx-gpt2 — 10 dakikalık ilk koşu"
+    },
+    {
+      "id": "f2d",
+      "p": "f2",
+      "t": "yap",
+      "core": true,
+      "lbl": "mlx-pretrain ile mini model (~200M token)"
+    },
+    {
+      "id": "f2e",
+      "p": "f2",
+      "t": "yap",
+      "max": 3,
+      "core": true,
+      "lbl": "build-nanogpt + ~$10 bulut GPT-2 124M",
+      "hint": "İlk bulut GPU koşun; loss eğrisini sakla."
+    },
+    {
+      "id": "f2f",
+      "p": "f2",
+      "t": "oku",
+      "core": true,
+      "lbl": "Ölçekleme üçlemesi: Kaplan → Chinchilla → veri-kısıtlı"
+    },
+    {
+      "id": "f2g",
+      "p": "f2",
+      "t": "yap",
+      "core": true,
+      "lbl": "Türkçe char-LM (kendi korpusun, MLX)"
+    },
+    {
+      "id": "f3a",
+      "p": "f3",
+      "t": "yap",
+      "core": true,
+      "lbl": "CS336 A1 — tokenizer+transformer (testler yeşil)"
+    },
+    {
+      "id": "f3b",
+      "p": "f3",
+      "t": "yap",
+      "max": 3,
+      "core": false,
+      "lbl": "CS336 A2 — Triton/DDP (bulut NVIDIA)"
+    },
+    {
+      "id": "f3c",
+      "p": "f3",
+      "t": "yap",
+      "max": 3,
+      "core": false,
+      "lbl": "CS336 A3 — ölçekleme yasaları"
+    },
+    {
+      "id": "f3d",
+      "p": "f3",
+      "t": "yap",
+      "core": true,
+      "lbl": "CS336 A4 — veri küratörlüğü"
+    },
+    {
+      "id": "f3e",
+      "p": "f3",
+      "t": "yap",
+      "max": 3,
+      "core": false,
+      "lbl": "CS336 A5 — alignment + RL"
+    },
+    {
+      "id": "f3f",
+      "p": "f3",
+      "t": "yap",
+      "core": true,
+      "lbl": "datatrove ile Türkçe slice pipeline'ı (dedup dahil)"
+    },
+    {
+      "id": "f3g",
+      "p": "f3",
+      "t": "oku",
+      "core": false,
+      "lbl": "Okuma rafı: Smol Playbook · OLMo 3 · Llama 3"
+    },
+    {
+      "id": "f4a",
+      "p": "f4",
+      "t": "yap",
+      "core": true,
+      "lbl": "Raschka bl.7 SFT + DPO defteri (from scratch)"
+    },
+    {
+      "id": "f4b",
+      "p": "f4",
+      "t": "yap",
+      "core": true,
+      "lbl": "TRL ile SFT + DPO koşusu"
+    },
+    {
+      "id": "f4c",
+      "p": "f4",
+      "t": "yap",
+      "core": false,
+      "lbl": "mlx-lm LoRA — Türkçe veride, cihazda"
+    },
+    {
+      "id": "f4d",
+      "p": "f4",
+      "t": "oku",
+      "core": true,
+      "lbl": "RLHF Book çekirdek bölümler"
+    },
+    {
+      "id": "f4e",
+      "p": "f4",
+      "t": "yap",
+      "max": 3,
+      "core": false,
+      "lbl": "Reasoning kitabı — sıfırdan GRPO (bl. 5–7)"
+    },
+    {
+      "id": "f4f",
+      "p": "f4",
+      "t": "yap",
+      "core": true,
+      "lbl": "lm-eval-harness entegrasyonu + önce/sonra tablosu"
+    },
+    {
+      "id": "f5a",
+      "p": "f5",
+      "t": "yap",
+      "core": true,
+      "lbl": "nanochat kodu + Mac mini config"
+    },
+    {
+      "id": "f5b",
+      "p": "f5",
+      "t": "yap",
+      "max": 3,
+      "core": true,
+      "lbl": "nanochat d20 speedrun (CORE skoru raporlu)"
+    },
+    {
+      "id": "f5c",
+      "p": "f5",
+      "t": "yap",
+      "core": true,
+      "lbl": "Türkçe veri slice — 1–10B token, dedup'lu"
+    },
+    {
+      "id": "f5d",
+      "p": "f5",
+      "t": "yap",
+      "core": true,
+      "lbl": "Türkçe model eğitimi (100–350M)"
+    },
+    {
+      "id": "f5e",
+      "p": "f5",
+      "t": "yap",
+      "core": true,
+      "lbl": "Cetvel eval + GGUF → kendi ollama'nda servis"
+    },
+    {
+      "id": "f5f",
+      "p": "f5",
+      "t": "yap",
+      "max": 3,
+      "core": false,
+      "lbl": "Yayın rotası: BabyLM / Osmanlı-OTC kararı + taslak"
+    }
   ]
 }

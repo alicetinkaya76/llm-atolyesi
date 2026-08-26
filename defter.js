@@ -171,6 +171,7 @@
       plan.href = A.phasePage(p.id);
       plan.addEventListener('click', function (ev) { ev.stopPropagation(); });
       head.appendChild(plan);
+      head.appendChild(kanitRozeti(p));
       var g = s.gate(p.id), kalan = s.gateRemaining(p.id);
       head.appendChild(el('span', 'gate' + (g === 'on' ? ' on' : g === 'run' ? ' run' : ''),
         g === 'on' ? 'KAPI GEÇİLDİ' : (kalan ? kalan + ' madde' : 'başlamadı')));
@@ -195,6 +196,52 @@
       kap.appendChild(card);
     });
     odakGoster();
+  }
+
+  /* ---------------- kanıt ---------------- */
+  var kanitVeri = null, kanitKarsi = null;
+
+  function kanitRozeti(p) {
+    var el2 = el('a', 'kanit');
+    var r = (window.Kanit && window.Kanit.repoBilgisi && window.Kanit.repoBilgisi()) || null;
+    var klasor = p.klasor || '';
+    el2.href = r && klasor
+      ? 'https://github.com/' + r.owner + '/' + r.repo + '/tree/main/' + klasor
+      : '#';
+    el2.target = '_blank';
+    el2.rel = 'noopener';
+    el2.addEventListener('click', function (ev) { ev.stopPropagation(); });
+
+    if (!kanitVeri || kanitVeri.hata) {
+      el2.className = 'kanit yok-veri';
+      el2.textContent = klasor + '/';
+      el2.title = kanitVeri && kanitVeri.hata === 'kota'
+        ? 'GitHub istek sınırı doldu; kanıt sonra tazelenecek.'
+        : 'Kanıt henüz okunmadı.';
+      return el2;
+    }
+    var k = kanitVeri.fazlar[p.id];
+    if (!k) { el2.className = 'kanit yok-veri'; el2.textContent = klasor + '/'; return el2; }
+
+    var satir = kanitKarsi && kanitKarsi.filter(function (x) { return x.id === p.id; })[0];
+    var acik = satir && satir.acik;
+    el2.className = 'kanit' + (acik ? ' acik' : (k.kanitDosya > 0 ? ' var' : ''));
+    el2.textContent = klasor + '/ ' + (k.kanitDosya > 0 ? k.kanitDosya + ' dosya' : '—');
+    el2.title = acik
+      ? 'Bu fazda ' + satir.iddia + ' madde "kapalı kitap yazdım" ya da üstünde, ama ' +
+        klasor + '/ klasöründe README dışında dosya görünmüyor. Kanıt başka bir depoda ' +
+        'ya da henüz push\'lanmamış olabilir.'
+      : (k.commit != null ? k.commit + ' commit' : 'commit sayısı bilinmiyor') +
+        (k.son ? ' · son ' + String(k.son).slice(0, 10) : '');
+    return el2;
+  }
+
+  function kanitYukle() {
+    if (!window.Kanit) return;
+    window.Kanit.yukle(muf).then(function (v) {
+      kanitVeri = v;
+      yenidenCiz();
+    }).catch(function () { /* kanıt katmanı isteğe bağlıdır; sessizce geç */ });
   }
 
   function maddeCiz(it, p) {
@@ -366,6 +413,19 @@
   function bannerCiz() {
     var k = $('banner-alani');
     k.innerHTML = '';
+    /* iddia-kanıt farkı: suçlama değil not. Kanıt başka depoda olabilir. */
+    if (kanitKarsi) {
+      var acikFaz = kanitKarsi.filter(function (x) { return x.acik; });
+      if (acikFaz.length) {
+        var ad = acikFaz.map(function (x) { return esc(x.klasor) + '/'; }).join(', ');
+        var toplam = acikFaz.reduce(function (n, x) { return n + x.iddia; }, 0);
+        k.appendChild(el('div', 'banner',
+          '<b>Kanıt notu:</b> ' + toplam + ' maddede "kapalı kitap yazdım" ya da üstü ' +
+          'işaretli, ama ' + ad + ' klasöründe README dışında dosya görünmüyor. ' +
+          'Kanıt başka bir depoda ya da henüz push\'lanmamış olabilir — bu bir hata değil, ' +
+          'yalnızca bir hatırlatma.'));
+      }
+    }
     if (!agdan) {
       k.appendChild(el('div', 'banner dikkat',
         'Depodaki <code>durum.json</code> okunamadı (çevrimdışı ya da dosyadan açıldı). ' +
@@ -384,6 +444,9 @@
 
   function yenidenCiz() {
     s = A.stats(muf, state);
+    /* iddia listesi basamaklarla birlikte değişir: karşılaştırmayı burada
+       tazele, yalnız kanıt yüklenirken değil */
+    if (kanitVeri && window.Kanit) kanitKarsi = window.Kanit.karsilastir(muf, s, kanitVeri);
     ozetCiz(); fazlarCiz(); jlisteCiz(); kayitBarCiz(); bannerCiz(); altbilgiCiz();
   }
 
@@ -733,6 +796,8 @@
     yenidenCiz();
     ghCiz();
 
+    kanitYukle();
+
     /* derin bağlantı: defter.html#f0a
        hashchange de dinlenir — aynı sayfada hash değişimi belgeyi yeniden
        yüklemez, dolayısıyla yalnızca açılışta bakmak yetmez. */
@@ -773,7 +838,12 @@
   }
 
   /* service worker (index ile aynı) */
-  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  /* Service worker YEREL geliştirmede kaydedilmez: varlıklar cache-first
+     servis edildiği için düzenlenen JS bir sonraki yüklemeye kadar eski
+     kalıyor ve bu, geliştirirken saatler yiyen bir yanılgı üretiyor
+     (bir kez yaşandı). Canlı sitede normal çalışır. */
+  var YEREL_MI = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0 && !YEREL_MI) {
     navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
       .then(function (reg) { reg.update(); }).catch(function () {});
   }

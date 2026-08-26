@@ -304,12 +304,152 @@ def ilerleme_serisi(m, d, hafta_sayisi, bugun=None):
 
 
 def haftalik_kazanc(m, d, hafta_sayisi=12, bugun=None):
-    """Haftalık çekirdek-yüzde kazancı; içinde bulunulan yarım hafta hariç."""
+    """Haftalık çekirdek-yüzde kazancı; içinde bulunulan yarım hafta hariç.
+    Başlamadan ÖNCEKİ haftalar gözlem sayılmaz — yoksa hiç çalışılmamış
+    haftalar 'sıfır hızlı hafta' gibi girip kestirimi haksız karartır."""
     seri = ilerleme_serisi(m, d, hafta_sayisi + 1, bugun)
     if not seri or len(seri) < 2:
         return None
-    out = [max(0, seri[i]["pct"] - seri[i - 1]["pct"]) for i in range(1, len(seri) - 1)]
+    olaylar = d.get("olaylar") or []
+    ilk_olay = olaylar[0]["d"] if olaylar else None
+    out = []
+    for i in range(1, len(seri) - 1):
+        if ilk_olay and seri[i]["son"] < ilk_olay:
+            continue
+        out.append(max(0, seri[i]["pct"] - seri[i - 1]["pct"]))
     return out or None
+
+
+
+# ---------------- tazelik (ustalık çürümesi) ----------------
+# Model ve gerekçe atolye.js'te ayrıntılı; iki uygulama AYNI sabitleri
+# kullanmak zorunda. Özet: FSRS-6 kuvvet yasası; S %90'a düşüş süresidir,
+# yarılanma ömrü DEĞİLDİR (90.355 katı).
+FSRS_DECAY = -0.1542
+FSRS_FACTOR = 0.9803464944134797
+YARILANMA_KAT = 90.355
+S0 = [0, 0.5, 1.5, 2.2, 4.4]
+
+
+def hatirlanabilirlik(gun, s0):
+    if not s0 or s0 <= 0:
+        return None
+    if gun <= 0:
+        return 1.0
+    return (1 + FSRS_FACTOR * gun / s0) ** FSRS_DECAY
+
+
+def yarilanma_gun(rung):
+    s0 = S0[max(0, min(rung, len(S0) - 1))]
+    return YARILANMA_KAT * s0 if s0 > 0 else None
+
+
+def tazelik(m, d, mid, bugun=None):
+    it = m["by_id"].get(mid)
+    if it is None:
+        return None
+    n = sev(d, mid)
+    if not n:
+        return None
+    t = sev_tarih(d, mid)
+    if not t:
+        return {"n": n, "bilinmiyor": True}
+    bugun = dt.date.fromisoformat(bugun) if bugun else dt.date.today()
+    gun = (bugun - dt.date.fromisoformat(t)).days
+    yari = yarilanma_gun(n)
+    R = hatirlanabilirlik(gun, S0[min(n, len(S0) - 1)])
+    durum = "taze"
+    if yari and gun >= yari:
+        durum = "yarilanma"
+    elif yari and gun >= yari / 3:
+        durum = "soluyor"
+    return {"n": n, "gun": gun, "R": R, "yarilanmaGun": yari, "durum": durum, "tarih": t}
+
+
+def tazeleme_kuyrugu(m, d, kac=3, bugun=None):
+    out = []
+    for it in m["items"]:
+        f = tazelik(m, d, it["id"], bugun)
+        if f and not f.get("bilinmiyor") and f["durum"] == "yarilanma":
+            out.append((it, f))
+    out.sort(key=lambda x: -x[1]["gun"])
+    return out[:kac]
+
+
+# ---------------- kestirim ----------------
+# atolye.js ile BİREBİR aynı sayıyı üretmeli: aynı tohumlu üreteç
+# (mulberry32) uint32 aritmetiğiyle taklit edilir.
+KESTIRIM_ASGARI = 5
+KESTIRIM_PENCERE = 20
+
+
+def _mulberry32(tohum):
+    a = tohum & 0xFFFFFFFF
+
+    def sonraki():
+        nonlocal a
+        a = (a + 0x6D2B79F5) & 0xFFFFFFFF
+        t = ((a ^ (a >> 15)) * (1 | a)) & 0xFFFFFFFF
+        t = (t + (((t ^ (t >> 7)) * (61 | t)) & 0xFFFFFFFF)) & 0xFFFFFFFF ^ t
+        t &= 0xFFFFFFFF
+        return ((t ^ (t >> 14)) & 0xFFFFFFFF) / 4294967296
+    return sonraki
+
+
+def hafta_sonra(n, bugun=None):
+    bugun = dt.date.fromisoformat(bugun) if bugun else dt.date.today()
+    return (hafta_baslangici(bugun) + dt.timedelta(days=7 * n + 6)).isoformat()
+
+
+def kestirim(m, d, kalan_yuzde, bugun=None, tohum=42):
+    ham = haftalik_kazanc(m, d, KESTIRIM_PENCERE, bugun)
+    if not ham or len(ham) < KESTIRIM_ASGARI:
+        return {"yeterli": False, "gozlem": len(ham) if ham else 0,
+                "gereken": KESTIRIM_ASGARI,
+                "neden": f"Kestirim için en az {KESTIRIM_ASGARI} tamamlanmış hafta gerekiyor."}
+    if not kalan_yuzde or kalan_yuzde <= 0:
+        return {"yeterli": True, "bitti": True, "gozlem": len(ham)}
+    if sum(ham) <= 0:
+        return {"yeterli": False, "gozlem": len(ham), "durgun": True,
+                "neden": f"Son {len(ham)} haftada ölçülebilir ilerleme yok."}
+
+    rnd = _mulberry32(tohum)
+    DENEME, SINIR = 10000, 520
+    sonuc = []
+    for _ in range(DENEME):
+        kalan, hafta = kalan_yuzde, 0
+        while kalan > 0 and hafta < SINIR:
+            kalan -= ham[int(rnd() * len(ham))]
+            hafta += 1
+        sonuc.append(hafta)
+    sonuc.sort()
+
+    def p(q):
+        return sonuc[max(0, math.ceil(q * DENEME) - 1)]
+
+    p50, p85, p95 = p(0.50), p(0.85), p(0.95)
+    if p50 >= SINIR:
+        return {"yeterli": False, "gozlem": len(ham), "durgun": True,
+                "neden": "Bu hızda öngörülebilir bir bitiş tarihi çıkmıyor."}
+    return {"yeterli": True, "gozlem": len(ham), "zayif": len(ham) < 10,
+            "p50": p50, "p85": p85, "p95": p95,
+            "tarih50": hafta_sonra(p50, bugun), "tarih85": hafta_sonra(p85, bugun),
+            "tarih95": hafta_sonra(p95, bugun) if p95 < SINIR else None}
+
+
+def kapiya_kalan_yuzde(m, d, pid):
+    cekirdek = [i for i in m["items"] if i.get("core")]
+    if not cekirdek:
+        return 0
+    eksik = 0.0
+    for i in faz_maddeleri(m, pid):
+        if not i.get("core"):
+            continue
+        hedef = gecis_esigi(i)
+        simdi = min(sev(d, i["id"]), tavan(i))
+        if simdi < hedef:
+            eksik += (hedef - simdi) / tavan(i)
+    return 100 * eksik / len(cekirdek)
 
 
 def sonraki_madde(m, d):
@@ -437,11 +577,40 @@ def cmd_seans(m, d, args):
                               + (f" — {args.yaptim[:60]}" if args.yaptim else ""))
 
 
+def sw_surum_damgala():
+    """sw.js'teki SURUM sabitini tarih+saatle güncelle.
+
+    Neden otomatik: service worker varlıkları cache-first veriyor ve tarayıcı
+    yeni worker'ı ancak sw.js'in BAYTLARI değiştiğinde kurar. Sürüm elle
+    artırılırsa er ya da geç unutulur ve kullanıcı eski JS ile kalır —
+    geliştirirken bu hata bir kez zaten yaşandı."""
+    yol = ROOT / "sw.js"
+    if not yol.exists():
+        return False
+    metin = yol.read_text(encoding="utf-8")
+    damga = dt.datetime.now().strftime("%Y%m%d-%H%M")
+    yeni_metin = re.sub(r"const SURUM = '[^']*';",
+                        f"const SURUM = 'atolye-{damga}';", metin, count=1)
+    if yeni_metin == metin:
+        return False
+    yol.write_text(yeni_metin, encoding="utf-8")
+    return True
+
+
 def yayinla(m, d, mesaj):
     """durum.json'u commit'le ve push'la; site kendini günceller."""
     if not git_var():
         print("Not: burası bir git deposu değil — yalnızca dosyalar güncellendi.")
         return False
+    ok, cikti = git("status", "--porcelain")
+    kod_degisti = any(
+        satir[3:].strip().endswith((".js", ".css", ".html", ".json"))
+        and not satir[3:].strip().endswith("durum.json")
+        for satir in cikti.splitlines()
+    )
+    if kod_degisti and sw_surum_damgala():
+        print("sw.js sürümü damgalandı (önbellek tazelensin diye).")
+        git("add", "sw.js")
     ok, _ = git("add", "durum.json")
     if not ok:
         print("UYARI: git add başarısız.")
