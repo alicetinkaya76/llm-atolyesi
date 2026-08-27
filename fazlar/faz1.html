@@ -15,6 +15,11 @@
   <h1>Tokenizer: Türkçe için en yüksek kaldıraç</h1>
   <p class="lede">2–3 hafta, ~20–30 saat, $0. Eklemeli morfoloji yüzünden Türkçe'nin LLM'lerde en çok hırpalandığı yer tokenizasyon: İngilizce-merkezli BPE, Türkçe metni %38–98 daha fazla token'a bölüyor (Kumru'nun ölçümü). Bu faz hem zanaat hem <strong>yayınlanabilir mikro-sonuç</strong> adayı.</p>
 
+  <div class="callout accent">
+    <h3>🔬 Önce tezgâhı aç</h3>
+    <p>Bu fazın tezi — Türkçe'nin tokenizasyonda hırpalandığı — <a href="../tezgah.html">Tokenizer Tezgâhı'nda</a> çalışır hâlde. Kendi metnini yükle, gerçek BPE'yi tarayıcıda eğit, fertility'yi ayrılmış kesitte ölç. Aşağıdaki haftalık plan o tezgâhın etrafında kurulur: önce oyna, sonra minbpe'yi kendin yaz.</p>
+  </div>
+
   <div class="callout kisiye">
     <h3>Sana özel: korpusların bu fazın laboratuvarı</h3>
     <p>Fertility deneylerini oyuncak veriyle değil kendi malzemenle yap: <strong>Alatlı külliyatı</strong> (9 cilt, 5.847 sayfa OCR+JSON — modern edebi Türkçe) ve Özateş vd.'nin <a href="https://arxiv.org/abs/2501.04828">OTC transliterasyonlu Osmanlı korpusu</a> (tarihsel katman). Aynı metni GPT-4 tokenizer'ı, Kumru'nun Türkçe BPE'si ve kendi eğittiğin tokenizer'la böl; token/kelime oranlarını tablola. Modern-tarihsel farkı tek başına ilginç bir DH bulgusu.</p>

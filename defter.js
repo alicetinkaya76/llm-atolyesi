@@ -617,6 +617,7 @@
       ['geri al', 'u', geriAl],
       ['tümünü aç', '', function () { muf.phases.forEach(function (p) { acikFazlar[p.id] = true; }); yenidenCiz(); }],
       ['tümünü kapa', '', function () { acikFazlar = {}; yenidenCiz(); }],
+      ['tokenizer tezgâhı', '', function () { location.href = 'tezgah.html'; }],
       ['yol haritası', '', function () { location.href = 'harita.html'; }],
       ['atölye ana sayfası', '', function () { location.href = 'index.html'; }],
       ['klavye kısayolları', '?', yardimGoster]

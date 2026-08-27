@@ -11,15 +11,16 @@
      · GERİSİ (css/js/ikon): cache-first, arkada tazelenir.
    SURUM her dağıtımda elle artırılır: sw.js baytları değişmezse tarayıcı
    yeni worker'ı hiç kurmaz ve eski önbellek sonsuza kadar yaşar. */
-const SURUM = 'atolye-20260827-0126';
+const SURUM = 'atolye-20260827-0614';
 const KABUK = SURUM + '-kabuk';
 const VERI = SURUM + '-veri';
 
 /* Yollar sw.js'in kendi konumuna göre çözülür; sw.js depo kökünde olduğu için
    kapsam otomatik olarak /llm-atolyesi/ (ve yerelde /) olur. */
 const ON_YUKLE = [
-  './', './index.html', './defter.html', './harita.html',
+  './', './index.html', './defter.html', './harita.html', './tezgah.html',
   './stil.css', './atolye.js', './pano.js', './defter.js', './github.js',
+  './bpe.js', './tezgah.js', './kanit.js',
   './mufredat.json', './ikon-192.png', './ikon-512.png',
   './apple-touch-icon.png', './manifest.json',
   './fazlar/zemin.html', './fazlar/faz0.html', './fazlar/faz1.html',
