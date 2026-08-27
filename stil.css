@@ -1,4 +1,12 @@
-/* LLM Atölyesi — ortak stil (index + faz sayfaları) */
+/* LLM Atölyesi — sitenin TEK stil dosyası.
+   Eskiden harita.html kendi 197 satırlık <style> bloğunu taşıyordu ve o
+   bloktaki 54 seçicinin 38'i buradakilerin kopyasıydı; iki yerde bakım
+   demek er ya da geç iki farklı görünüm demek. Artık tek dosya.
+
+   Renkler: viridis rampası fazlara sabit kimlik verir (tema değişse de
+   FAZ 3 hep aynı yeşildir). Rozetler ile ilerleme çubukları AYRI ramp
+   kullanır — sebebi aşağıda. */
+
 :root {
   --bg: #f6f9f8; --surface: #ffffff; --surface-2: #eef4f2;
   --text: #1a2523; --muted: #566762; --line: #dbe5e1;
@@ -35,26 +43,33 @@
   --fz-bar: #8ea39d; --f0-bar: #a765bd; --f1-bar: #6674cc; --f2-bar: #41a0ba;
   --f3-bar: #22a884; --f4-bar: #7ad151; --f5-bar: #fde725;
 }
+
+/* Faz kimliği tek yerden dağıtılır: bir öğeye data-faz="f3" yaz, o öğe ve
+   altındaki her şey doğru --pc / --pc-bar değerini alır. Böylece sayfalarda
+   style="--pc: var(--f3)" gibi satır-içi stil kalmıyor ve CSP'den
+   'unsafe-inline' tamamen çıkarılabiliyor. */
+[data-faz="z"]  { --pc: var(--fz); --pc-bar: var(--fz-bar); }
+[data-faz="f0"] { --pc: var(--f0); --pc-bar: var(--f0-bar); }
+[data-faz="f1"] { --pc: var(--f1); --pc-bar: var(--f1-bar); }
+[data-faz="f2"] { --pc: var(--f2); --pc-bar: var(--f2-bar); }
+[data-faz="f3"] { --pc: var(--f3); --pc-bar: var(--f3-bar); }
+[data-faz="f4"] { --pc: var(--f4); --pc-bar: var(--f4-bar); }
+[data-faz="f5"] { --pc: var(--f5); --pc-bar: var(--f5-bar); }
+
+/* ---------- taban ---------- */
 * { box-sizing: border-box; }
 body {
   background: var(--bg); color: var(--text); margin: 0;
   font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
-  font-size: 1.03rem; line-height: 1.62;
+  font-size: 1.04rem; line-height: 1.63;
 }
-.wrap {
-  max-width: 46rem; margin: 0 auto;
-  /* viewport-fit=cover + black-translucent durum çubuğu: içerik çentiğin
-     altına kayar. env() dolgusu olmadan başlık iPhone'da gizlenir. */
-  padding: calc(2.2rem + env(safe-area-inset-top, 0px))
-           calc(1.2rem + env(safe-area-inset-right, 0px))
-           calc(5rem + env(safe-area-inset-bottom, 0px))
-           calc(1.2rem + env(safe-area-inset-left, 0px));
-}
+.wrap { max-width: 46rem; margin: 0 auto; padding: 2.4rem 1.25rem 5rem; }
+.wrap.genis { max-width: 52rem; }   /* tezgâh: yan yana ölçüm kartları */
 h1, h2, h3 { font-family: "Bricolage Grotesque", "Helvetica Neue", sans-serif; line-height: 1.15; text-wrap: balance; }
-h1 { font-size: clamp(1.9rem, 5.5vw, 2.7rem); font-weight: 800; margin: 0.4rem 0 0.6rem; letter-spacing: -0.01em; }
-h2 { font-size: 1.4rem; font-weight: 700; margin: 2.4rem 0 0.8rem; }
-h3 { font-size: 1.08rem; font-weight: 650; margin: 1.5rem 0 0.5rem; }
-p { margin: 0.7rem 0; }
+h1 { font-size: clamp(1.95rem, 5.5vw, 2.8rem); font-weight: 800; margin: 0.4rem 0 0.6rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.42rem; font-weight: 700; margin: 2.6rem 0 0.8rem; }
+h3 { font-size: 1.1rem; font-weight: 650; margin: 1.6rem 0 0.5rem; }
+p { margin: 0.72rem 0; }
 a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
 a:hover { color: var(--accent-ink); }
 a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
@@ -64,26 +79,19 @@ code, .mono {
 }
 pre {
   background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
-  padding: 0.8rem 1rem; overflow-x: auto; font-size: 0.82rem; line-height: 1.5;
+  padding: 0.85rem 1rem; overflow-x: auto; font-size: 0.82rem; line-height: 1.55;
 }
 pre code { background: none; padding: 0; font-size: 1em; }
 .kicker {
-  font-family: "IBM Plex Mono", monospace; font-size: 0.75rem;
-  letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+  font-family: "IBM Plex Mono", monospace; font-size: 0.76rem;
+  letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted);
 }
 .kicker a { color: var(--muted); text-decoration: none; }
 .kicker a:hover { color: var(--accent); }
-.lede { font-size: 1.1rem; color: var(--muted); margin-top: 0.2rem; }
-
-.nav { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
-
-.callout {
-  background: var(--surface); border: 1px solid var(--line);
-  border-radius: 12px; padding: 1rem 1.25rem; margin: 1.4rem 0;
-}
-.callout.accent { border-color: var(--accent); }
-.callout.kisiye { border-left: 4px solid var(--accent); }
-.callout h3 { margin-top: 0.15rem; }
+.lede { font-size: 1.12rem; color: var(--muted); margin-top: 0.2rem; }
+.small { font-size: 0.88rem; color: var(--muted); }
+.ilk { margin-top: 0; }
+.foot { color: var(--muted); font-size: 0.86rem; border-top: 1px solid var(--line); margin-top: 3.2rem; padding-top: 1.1rem; }
 
 ul.plain { padding-left: 1.2rem; margin: 0.6rem 0; }
 ul.plain li { margin: 0.45rem 0; }
@@ -91,37 +99,103 @@ ol.steps { padding-left: 1.3rem; margin: 0.6rem 0; }
 ol.steps li { margin: 0.55rem 0; }
 ol.steps li::marker { font-family: "IBM Plex Mono", monospace; font-weight: 600; color: var(--accent); }
 
+.callout {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; padding: 1.05rem 1.28rem; margin: 1.45rem 0;
+}
+.callout.accent { border-color: var(--accent); }
+.callout.kisiye { border-left: 4px solid var(--accent); }
+.callout h3 { margin-top: 0.15rem; }
+
+.quote {
+  border-left: 3px solid var(--accent); background: var(--surface);
+  padding: 0.9rem 1.1rem; margin: 1.5rem 0; border-radius: 0 8px 8px 0;
+  font-style: italic; color: var(--muted);
+}
+.quote .who { display: block; font-style: normal; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; margin-top: 0.4rem; }
+
 .tag {
   display: inline-block; font-family: "IBM Plex Mono", monospace;
-  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em;
+  font-size: 0.71rem; font-weight: 600; letter-spacing: 0.08em;
   padding: 0.18em 0.65em; border-radius: 999px;
   background: var(--pc, var(--accent)); color: #fff;
 }
 .tag.inkdark { color: var(--badge-ink-dark); }
 
-/* hafta blokları */
+/* ---------- tablolar ---------- */
+.tblwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; margin: 1.15rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; background: var(--surface); }
+th, td { text-align: left; padding: 0.58rem 0.85rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+th { font-family: "Bricolage Grotesque", sans-serif; font-weight: 650; font-size: 0.85rem; background: var(--surface-2); }
+td.num, th.num { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; font-size: 0.84rem; white-space: nowrap; }
+
+/* ---------- kaynak listeleri (harita + faz sayfaları) ---------- */
+ul.res { list-style: none; margin: 0.85rem 0 1.1rem; padding: 0; display: grid; gap: 0.6rem; }
+ul.res li { background: var(--surface-2); border-radius: 8px; padding: 0.62rem 0.85rem; }
+ul.res .top { display: flex; justify-content: space-between; gap: 0.75rem; align-items: baseline; flex-wrap: wrap; }
+ul.res .meta { font-family: "IBM Plex Mono", monospace; font-size: 0.71rem; color: var(--muted); white-space: nowrap; }
+ul.res .desc { margin: 0.22rem 0 0; font-size: 0.93rem; color: var(--text); }
+ul.res a { font-weight: 600; }
+
+.deliv {
+  display: flex; gap: 0.6rem; align-items: baseline; font-size: 0.95rem;
+  border-top: 1px dashed var(--line); padding: 0.8rem 0 0.4rem; margin-top: 0.8rem;
+}
+.deliv .lbl {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.71rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); flex-shrink: 0;
+}
+
+/* ---------- harita: faz şeridi ve blokları ---------- */
+.overview { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.5rem 0 0.5rem; }
+.overview a.ph {
+  flex: 1 1 8.5rem; display: block; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 0.7rem 0.8rem; text-decoration: none; color: var(--text);
+}
+.overview a.ph:hover { border-color: var(--accent); }
+.overview .dot {
+  width: 0.85rem; height: 0.85rem; border-radius: 50%;
+  display: inline-block; margin-bottom: 0.35rem;
+  background: var(--pc, var(--accent));   /* rengi data-faz'dan alır */
+}
+.overview .nm { display: block; font-family: "Bricolage Grotesque", sans-serif; font-weight: 650; font-size: 0.92rem; line-height: 1.25; }
+.overview .dur { display: block; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); margin-top: 0.25rem; }
+
+.phase {
+  border-left: 4px solid var(--pc, var(--accent)); background: var(--surface);
+  border-radius: 0 12px 12px 0; padding: 1.4rem 1.5rem 0.5rem; margin: 2rem 0;
+}
+.phase .tag { margin-bottom: 0.3rem; }
+.phase h2 { margin: 0.2rem 0; font-size: 1.35rem; }
+.phase .dur { font-family: "IBM Plex Mono", monospace; font-size: 0.8rem; color: var(--muted); }
+.goal { font-style: italic; color: var(--muted); }
+
+/* ---------- faz sayfaları: hafta blokları ---------- */
 .hafta {
-  border-left: 4px solid var(--pc, var(--accent));
-  background: var(--surface); border-radius: 0 12px 12px 0;
-  padding: 1rem 1.25rem 0.6rem; margin: 1.1rem 0;
+  border-left: 4px solid var(--pc, var(--accent)); background: var(--surface);
+  border-radius: 0 12px 12px 0; padding: 1rem 1.25rem 0.6rem; margin: 1.1rem 0;
 }
 .hafta h3 { margin: 0.1rem 0 0.4rem; }
 .hafta .sure { font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--muted); }
+
+/* Madde kimliği + yanına app.js'in yazdığı basamak rozeti. Bunlar bağlantı
+   DEĞİL: tıklanacak bir defter sayfası yok, işaretleme terminalde yapılır.
+   Rozetin başlığı (title) o maddenin komutunu taşır. */
 .madde {
   font-family: "IBM Plex Mono", monospace; font-size: 0.68rem;
   border: 1px dashed var(--line); border-radius: 4px; padding: 0.05em 0.4em;
   color: var(--muted); white-space: nowrap;
 }
+.madde.basladi { border-style: solid; border-color: var(--accent); color: var(--accent); }
+.madde.tamam { border-style: solid; background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.basamak {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.64rem;
+  color: var(--muted); font-variant-numeric: tabular-nums; margin-left: 0.25em;
+}
 
-/* kaynak listeleri */
-ul.res { list-style: none; margin: 0.8rem 0 1rem; padding: 0; display: grid; gap: 0.55rem; }
-ul.res li { background: var(--surface-2); border-radius: 8px; padding: 0.6rem 0.85rem; }
-ul.res .top { display: flex; justify-content: space-between; gap: 0.7rem; align-items: baseline; flex-wrap: wrap; }
-ul.res .meta { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
-ul.res .desc { margin: 0.2rem 0 0; font-size: 0.93rem; }
-ul.res a { font-weight: 600; }
-
-/* index kartları */
+/* ---------- index kartları ---------- */
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.8rem; margin: 1.4rem 0; }
 a.card {
   display: block; background: var(--surface); border: 1px solid var(--line);
@@ -131,27 +205,181 @@ a.card:hover { border-color: var(--accent); }
 a.card .t { font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 1.05rem; display: block; }
 a.card .d { font-size: 0.88rem; color: var(--muted); margin-top: 0.25rem; display: block; }
 
-/* index canlı pano */
-.pano { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; margin: 1.4rem 0; }
-.pano .satir { display: flex; align-items: center; gap: 0.7rem; margin: 0.45rem 0; }
-.pano .etiket { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; width: 3.6rem; flex-shrink: 0; color: var(--muted); }
-.pano .pb { flex: 1; height: 0.6rem; border-radius: 4px; background: var(--surface-2); overflow: hidden; position: relative; }
-.pano .pb i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; }
-.pano .pct { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; width: 3.2rem; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
-.pano .gate { font-family: "IBM Plex Mono", monospace; font-size: 0.62rem; width: 6.2rem; flex-shrink: 0; color: var(--muted); }
-.pano .gate.on { color: var(--ok); font-weight: 600; }
-.pano .ozet { font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--muted); margin-bottom: 0.5rem; }
+/* ================= pano (index.html, app.js çizer) =================
+   Dört parça, bu sırayla: kendine not · sıradaki iş · kapı merdiveni ·
+   saatler. Sıralama bilinçli — ilk ikisi karar verdirir, son ikisi
+   yalnızca bağlam. */
 
-.tblwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; margin: 1.1rem 0; }
-table { border-collapse: collapse; width: 100%; font-size: 0.92rem; background: var(--surface); }
-th, td { text-align: left; padding: 0.55rem 0.8rem; border-bottom: 1px solid var(--line); vertical-align: top; }
-tr:last-child td { border-bottom: none; }
-th { font-family: "Bricolage Grotesque", sans-serif; font-weight: 650; font-size: 0.85rem; background: var(--surface-2); }
-td.num, th.num { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; font-size: 0.84rem; white-space: nowrap; }
+.not {
+  border-left: 3px solid var(--warn); background: var(--surface);
+  border-radius: 0 10px 10px 0; padding: 0.7rem 1rem; margin: 1.4rem 0 0.8rem;
+}
+.not-ust {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.66rem;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+}
+.not-metin { font-size: 1rem; margin-top: 0.2rem; }
 
-.deliv { display: flex; gap: 0.6rem; align-items: baseline; border-top: 1px dashed var(--line); padding: 0.8rem 0 0.3rem; margin-top: 0.8rem; font-size: 0.95rem; }
-.deliv .lbl { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); flex-shrink: 0; }
+.siradaki {
+  background: var(--surface); border: 1px solid var(--line);
+  border-left: 5px solid var(--pc, var(--accent));
+  border-radius: 0 14px 14px 0; padding: 1.05rem 1.3rem; margin: 0.8rem 0 1.2rem;
+}
+.siradaki .ust {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.68rem;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+}
+.siradaki .baslik {
+  font-family: "Bricolage Grotesque", sans-serif; font-weight: 700;
+  font-size: 1.25rem; line-height: 1.25; margin: 0.3rem 0 0.4rem;
+}
+.siradaki .alt { font-size: 0.93rem; color: var(--muted); margin: 0.18rem 0; }
+.siradaki .kod {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.78rem;
+  background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px;
+  padding: 0.4rem 0.65rem; margin-top: 0.7rem; overflow-x: auto; white-space: nowrap;
+}
+.siradaki .kod::before { content: "$ "; color: var(--muted); }
 
-.foot { color: var(--muted); font-size: 0.86rem; border-top: 1px solid var(--line); margin-top: 3rem; padding-top: 1.1rem; }
-.small { font-size: 0.88rem; color: var(--muted); }
+/* Tek düğme tanımı; hem <a> hem <button> için. */
+.dugme {
+  font-family: "Bricolage Grotesque", sans-serif; font-weight: 650; font-size: 0.86rem;
+  background: var(--accent); color: var(--bg); border: none; border-radius: 8px;
+  padding: 0.45rem 1rem; cursor: pointer; text-decoration: none; display: inline-block;
+}
+.dugme:hover { background: var(--accent-ink); color: var(--bg); }
+.dugme:disabled { opacity: 0.5; cursor: default; }
+.dugme.ikincil { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+.dugme.ikincil:hover { background: transparent; color: var(--accent-ink); border-color: var(--accent); }
+.dugme:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.siradaki .dugme { margin-top: 0.75rem; }
+
+/* Kapı merdiveni: her satır bir faz, genişlik o fazın çekirdek yüzdesi,
+   sağdaki sayı ise o kapının gerekli KÜMÜLATİF çekirdek yüzdesi. */
+.merdiven {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; padding: 0.9rem 1.1rem; margin: 1.2rem 0;
+}
+.merdiven .ust {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.68rem;
+  letter-spacing: 0.11em; text-transform: uppercase; color: var(--muted);
+  margin-bottom: 0.55rem;
+}
+.merdiven .small { margin: 0.7rem 0 0; font-size: 0.8rem; }
+a.kapi {
+  display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.3rem 0; text-decoration: none; color: var(--text);
+  border-bottom: 1px solid transparent;
+}
+a.kapi:hover { border-bottom-color: var(--line); }
+a.kapi .etiket {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.68rem;
+  width: 3.6rem; flex-shrink: 0; color: var(--muted);
+}
+a.kapi .cubuk {
+  flex: 1; min-width: 3rem; height: 0.55rem; border-radius: 4px;
+  background: var(--surface-2); overflow: hidden;
+}
+a.kapi .cubuk i { display: block; height: 100%; border-radius: 4px; background: var(--pc-bar, var(--accent)); }
+a.kapi .esik {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.7rem;
+  width: 3rem; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+a.kapi .not-kucuk {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.62rem;
+  width: 5.2rem; text-align: right; color: var(--muted); flex-shrink: 0;
+}
+a.kapi.gecildi .etiket { color: var(--ok); font-weight: 600; }
+a.kapi.gecildi .not-kucuk { color: var(--ok); font-weight: 600; }
+@media (max-width: 30rem) {
+  a.kapi .not-kucuk { display: none; }
+}
+
+.sayilar {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.76rem;
+  color: var(--muted); font-variant-numeric: tabular-nums; margin: 0.6rem 0 0;
+}
+.uyari {
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px;
+  padding: 0.6rem 0.9rem; font-size: 0.86rem; color: var(--muted); margin: 1.4rem 0;
+}
+
+/* ================= tokenizer tezgâhı (tezgah.html) =================
+   Bu blok yalnızca tek sayfa tarafından kullanılıyor ama yine de burada:
+   sitede ikinci bir stil kaynağı olmasın diye. */
+
+.arac { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: flex-end; margin: 1rem 0; }
+.arac label {
+  display: block; font-family: "IBM Plex Mono", monospace; font-size: 0.66rem;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.2rem;
+}
+textarea, select, input[type=range], input[type=text] {
+  border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text);
+  font-family: "Source Serif 4", Georgia, serif; font-size: 0.95rem; padding: 0.5rem 0.65rem;
+}
+textarea { width: 100%; min-height: 8rem; resize: vertical; line-height: 1.5; }
+textarea.kisa { min-height: 4rem; }
+input[type=range].genis { width: 16rem; }
+textarea:focus, select:focus, input:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+
+.metrikler { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.6rem; margin: 1.2rem 0; }
+.metrik { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0.65rem 0.85rem; }
+.metrik .v { font-family: "IBM Plex Mono", monospace; font-size: 1.4rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.metrik .l { font-size: 0.78rem; color: var(--muted); }
+.metrik .ek { font-family: "IBM Plex Mono", monospace; font-size: 0.64rem; color: var(--muted); margin-top: 0.15rem; }
+
+.tokenler {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 0.7rem 0.85rem; line-height: 2.1; margin: 0.6rem 0;
+}
+.kelime-grubu { display: inline; margin-right: 0.15rem; }
+.tok {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.82rem;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-radius: 3px; padding: 0.12em 0.22em; margin: 0 1px;
+  white-space: pre; border-bottom: 2px solid transparent;
+}
+.tok.bolunmus { border-bottom-color: var(--warn); }
+
+.hasar { display: grid; gap: 0.45rem; margin: 0.8rem 0; }
+.hasar-satir {
+  display: flex; gap: 0.7rem; align-items: center; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0.5rem 0.8rem;
+}
+.hasar-kelime { font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; font-weight: 600; width: 8rem; }
+.hasar-kutu { display: inline-flex; align-items: center; gap: 0.2rem; }
+.hasar-etiket { font-family: "IBM Plex Mono", monospace; font-size: 0.58rem; color: var(--muted); width: 2.8rem; }
+.parca { font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; padding: 0.12em 0.3em; border-radius: 3px; white-space: pre; }
+.parca.kotu { background: color-mix(in srgb, var(--warn) 22%, transparent); border: 1px solid var(--warn); }
+.parca.iyi { background: color-mix(in srgb, var(--ok) 18%, transparent); border: 1px solid var(--ok); }
+
+.ekler { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.7rem 0; }
+.ek-rozet {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.78rem;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 0.15em 0.6em;
+}
+.ek-rozet i { color: var(--muted); font-size: 0.68em; font-style: normal; }
+
+.iz { display: flex; flex-wrap: wrap; gap: 0.28rem; margin: 0.7rem 0; }
+.iz-adim {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.74rem;
+  background: var(--surface-2); border-radius: 5px; padding: 0.12em 0.45em; white-space: pre;
+}
+.iz-adim i { color: var(--muted); font-size: 0.72em; font-style: normal; margin-right: 0.25em; }
+
+.kiyas { display: grid; gap: 0.3rem; margin: 0.8rem 0; }
+.kiyas-satir { display: flex; align-items: center; gap: 0.6rem; font-size: 0.82rem; }
+.kiyas-ad { width: 14rem; flex-shrink: 0; }
+.kiyas-cubuk { flex: 1; min-width: 4rem; height: 0.6rem; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+.kiyas-cubuk i { display: block; height: 100%; background: var(--muted); border-radius: 3px; }
+.kiyas-v { font-family: "IBM Plex Mono", monospace; width: 2.6rem; text-align: right; font-variant-numeric: tabular-nums; }
+.kiyas-not { font-family: "IBM Plex Mono", monospace; font-size: 0.62rem; color: var(--muted); width: 12rem; }
+.kiyas-satir.ben { font-weight: 700; }
+.kiyas-satir.ben .kiyas-cubuk i { background: var(--accent); }
+@media (max-width: 34rem) { .kiyas-ad { width: 9rem; } .kiyas-not { display: none; } }
+
+tr.secili td { background: color-mix(in srgb, var(--accent) 10%, transparent); font-weight: 600; }
+#durum { font-family: "IBM Plex Mono", monospace; font-size: 0.8rem; color: var(--warn); display: none; margin: 0.5rem 0; }
+.ozet-satir { font-family: "IBM Plex Mono", monospace; font-size: 0.74rem; color: var(--muted); }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

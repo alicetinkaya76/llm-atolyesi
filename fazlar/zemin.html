@@ -2,15 +2,16 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.github.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="atolye-kok" content="../">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Zemin — Python/PyTorch</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="../stil.css">
 </head>
 <body>
-<div class="wrap" style="--pc: var(--fz)">
-  <p class="kicker"><a href="../index.html">← atölye</a> · <a href="../harita.html">harita</a> · <a href="../defter.html">defter</a></p>
+<div class="wrap" data-faz="z">
+  <p class="kicker"><a href="../index.html">← atölye</a> · <a href="../harita.html">harita</a></p>
   <p><span class="tag">ZEMİN</span></p>
   <h1>Python/PyTorch zemini</h1>
   <p class="lede">1–2 hafta, Faz 0 ile paralel yürüyebilir. Amaç genel Python öğrenmek değil: nanoGPT'nin <a href="https://github.com/karpathy/nanoGPT/blob/master/model.py">model.py</a>'ındaki ~300 satırın her birini açıklayabilmek. Ölçüt net: açıklayamadığın satır kalmayınca zemin biter.</p>
@@ -23,18 +24,18 @@
   <div class="hafta">
     <h3>Hafta 1 <span class="sure">· ~5–7 sa</span></h3>
     <ul class="plain">
-      <li><a class="madde" id="z1" href="../defter.html#z1" title="Defterde işaretle: z1">z1</a> <a href="https://github.com/srush/Tensor-Puzzles">Tensor Puzzles</a> 1–11: Colab'da aç; günde 3–4 bulmaca. Kural: çözüm tek satır, yerleşik fonksiyon yok. Takıldığında videoyu değil, broadcasting sayfasını aç.</li>
-      <li><a class="madde" id="z2" href="../defter.html#z2" title="Defterde işaretle: z2">z2</a> <a href="https://docs.pytorch.org/tutorials/beginner/basics/intro.html">PyTorch "Learn the Basics"</a> modül 1–4 (Tensors, Data, Transforms, Build Model). Kodu Colab'da değil kendi Mac'inde koştur; <code>device='mps'</code> ile.</li>
-      <li><a class="madde" id="z3" href="../defter.html#z3" title="Defterde işaretle: z3">z3</a> <a href="https://numpy.org/doc/stable/user/basics.broadcasting.html">NumPy broadcasting</a> sayfası — 1 saat, bir kez, dikkatle. Sonrası hep pratik.</li>
+      <li><span class="madde" id="z1">z1</span> <a href="https://github.com/srush/Tensor-Puzzles">Tensor Puzzles</a> 1–11: Colab'da aç; günde 3–4 bulmaca. Kural: çözüm tek satır, yerleşik fonksiyon yok. Takıldığında videoyu değil, broadcasting sayfasını aç.</li>
+      <li><span class="madde" id="z2">z2</span> <a href="https://docs.pytorch.org/tutorials/beginner/basics/intro.html">PyTorch "Learn the Basics"</a> modül 1–4 (Tensors, Data, Transforms, Build Model). Kodu Colab'da değil kendi Mac'inde koştur; <code>device='mps'</code> ile.</li>
+      <li><span class="madde" id="z3">z3</span> <a href="https://numpy.org/doc/stable/user/basics.broadcasting.html">NumPy broadcasting</a> sayfası — 1 saat, bir kez, dikkatle. Sonrası hep pratik.</li>
     </ul>
   </div>
 
   <div class="hafta">
     <h3>Hafta 2 <span class="sure">· ~5–7 sa</span></h3>
     <ul class="plain">
-      <li><a class="madde" href="../defter.html#z1" title="Defterde işaretle: z1">z1</a> Tensor Puzzles 12–21 (zorlar: <code>bucketize</code>, <code>scatter_add</code>). 21/21 → defterde z1'i 3'e çek.</li>
-      <li><a class="madde" href="../defter.html#z2" title="Defterde işaretle: z2">z2</a> "Learn the Basics" modül 5–7 (Autograd, Optimization, Save/Load). Autograd modülünde dur: <code>requires_grad</code>, <code>backward()</code>, <code>no_grad()</code> üçgenini kendi cümlelerinle deftere yaz.</li>
-      <li><a class="madde" id="z4" href="../defter.html#z4" title="Defterde işaretle: z4">z4</a> <strong>Öz-test:</strong> nanoGPT <code>model.py</code>'ı aç, satır satır in. Açıklayamadığın her satırı deftere yaz; kategorisine göre kaynağa dön (şekil → Puzzles; autograd → LtB; Python sınıf mekaniği → <a href="https://docs.python.org/3/tutorial/classes.html">Tutorial §9</a>). Faz 0'ın sonunda testi tekrarla.</li>
+      <li><span class="madde">z1</span> Tensor Puzzles 12–21 (zorlar: <code>bucketize</code>, <code>scatter_add</code>). 21/21 → defterde z1'i 3'e çek.</li>
+      <li><span class="madde">z2</span> "Learn the Basics" modül 5–7 (Autograd, Optimization, Save/Load). Autograd modülünde dur: <code>requires_grad</code>, <code>backward()</code>, <code>no_grad()</code> üçgenini kendi cümlelerinle deftere yaz.</li>
+      <li><span class="madde" id="z4">z4</span> <strong>Öz-test:</strong> nanoGPT <code>model.py</code>'ı aç, satır satır in. Açıklayamadığın her satırı deftere yaz; kategorisine göre kaynağa dön (şekil → Puzzles; autograd → LtB; Python sınıf mekaniği → <a href="https://docs.python.org/3/tutorial/classes.html">Tutorial §9</a>). Faz 0'ın sonunda testi tekrarla.</li>
     </ul>
   </div>
 
@@ -53,5 +54,6 @@
 
   <p class="foot"><a href="../index.html">← Atölye</a> · Sonraki: <a href="faz0.html">Faz 0 — Karpathy serisi</a></p>
 </div>
+<script type="module" src="../app.js"></script>
 </body>
 </html>

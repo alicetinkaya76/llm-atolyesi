@@ -1,36 +1,233 @@
-#!/bin/sh
-# LLM Atölyesi — her yerden çalışan kısayol.
-# Kurulum (bir kez):
-#   ln -sf ~/Desktop/llm-atolyesi/atolye /usr/local/bin/atolye
-# Kullanım:
-#   atolye                 → bugün ne yapmalıyım
-#   atolye durum | rapor | liste f0
-#   atolye seviye f0a 3 -y
-#   atolye seans --saat 2.5 --faz f0 --yaptim "..." -y
-#   atolye ac              → siteyi tarayıcıda aç
-#   atolye site            → yerel sunucu (localhost:8933)
-set -eu
+#!/usr/bin/env node
+/* LLM Atölyesi — terminal arayüzü ve durum.json'un TEK YAZICISI.
+   Sayfa salt-okunurdur; bu yüzden "tarayıcıdaki taslak ile depodaki durumu
+   uzlaştırma" diye bir sorun yok — o sorunu çözen bütün makine (içerik
+   imzası, zaman damgası karşılaştırması, geri-al yığını, indir-ve-değiştir
+   akışı, token ile yazma) tek yazıcıda hiç doğmuyor.
 
-KOK="$(cd "$(dirname "$(readlink "$0" 2>/dev/null || echo "$0")")" && pwd)"
-DEFTER="$KOK/defter.py"
+   Kurulum: ln -sf ~/Desktop/llm-atolyesi/atolye /usr/local/bin/atolye
+   Kullanım:
+     atolye                  bugün ne açacağım
+     atolye f1a 3            basamak ata
+     atolye seans            $EDITOR'de seans notu aç
+     atolye rapor            son 12 hafta + faz durumu
+     atolye liste [faz]      madde kimlikleri
+     atolye yayinla          commit + push
+     atolye site             yerel sunucu
+   Çoğu komut -y ile: kaydet, commit'le, push'la. */
+import { readFileSync, writeFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { tmpdir } from 'node:os';
+import {
+  tavan, esik, basamakAdlari, fazSayfasi, bugunIso,
+  durumOku, basamakAta, hesap, bosDurum
+} from './atolye.mjs';
 
-[ -f "$DEFTER" ] || { echo "defter.py bulunamadı: $DEFTER" >&2; exit 1; }
+const KOK = dirname(fileURLToPath(import.meta.url));
+const DURUM = join(KOK, 'durum.json');
+const muf = JSON.parse(readFileSync(join(KOK, 'mufredat.json'), 'utf8'));
+const madde = id => muf.items.find(i => i.id === id);
+const faz = id => muf.phases.find(p => p.id === id);
 
-# argümansız çağrı → bugün panosu
-[ $# -eq 0 ] && set -- bugun
+function oku() {
+  if (!existsSync(DURUM)) return bosDurum();
+  try {
+    return durumOku(JSON.parse(readFileSync(DURUM, 'utf8')), muf);
+  } catch (e) {
+    console.error(`HATA: durum.json okunamadı (${e.message}). Elle düzelt.`);
+    process.exit(1);
+  }
+}
+function yaz(d) {
+  writeFileSync(DURUM, JSON.stringify(d, null, 1) + '\n', 'utf8');
+}
 
-case "$1" in
-  ac)
-    open "https://alicetinkaya76.github.io/llm-atolyesi/"
-    ;;
-  site)
-    echo "Yerel atölye: http://localhost:8933  (durdurmak için Ctrl-C)"
-    exec node "$KOK/serve.mjs"
-    ;;
-  yerel)
-    open "file://$KOK/index.html"
-    ;;
-  *)
-    exec python3 "$DEFTER" "$@"
-    ;;
-esac
+function git(...a) {
+  try {
+    return { ok: true, out: execFileSync('git', a, { cwd: KOK, encoding: 'utf8' }).trim() };
+  } catch (e) {
+    return { ok: false, out: String((e.stderr || e.stdout || e.message)).trim() };
+  }
+}
+
+function yayinla(mesaj) {
+  if (!existsSync(join(KOK, '.git'))) return console.log('Not: git deposu değil.');
+  git('add', 'durum.json');
+  if (git('diff', '--cached', '--quiet').ok) return console.log('Değişiklik yok.');
+  const c = git('commit', '-m', mesaj);
+  if (!c.ok) return console.error('commit başarısız:\n' + c.out);
+  const p = git('push');
+  console.log(p.ok ? '✓ Yayınlandı.' : 'UYARI: push başarısız (commit yerelde):\n' + p.out);
+}
+
+const cubuk = (pct, w = 18) => '█'.repeat(Math.round(w * pct / 100)) + '░'.repeat(w - Math.round(w * pct / 100));
+const sa = v => (Math.round(v * 10) / 10).toString();
+
+/* ---------------- komutlar ---------------- */
+
+function bugun(d) {
+  const h = hesap(muf, d);
+  console.log(`\n${bugunIso()} — bugün ne açacağım?\n`);
+
+  if (h.sonYarin) {
+    /* Bağlam sıcakken kendi yazdığın not: sistemdeki tek gerçekten
+       ileriye dönük veri. Bu yüzden en üstte. */
+    console.log(`  KENDİNE NOT (${h.sonYarin.date})`);
+    console.log(`    ${h.sonYarin.yarin}\n`);
+  }
+
+  if (h.sonraki) {
+    const it = h.sonraki, ad = basamakAdlari(muf, it), n = h.n(it.id);
+    console.log(`  SIRADAKİ  [${it.id}] ${it.lbl}`);
+    console.log(`            ${ad[n]} → ${ad[esik(it)]}`);
+    if (it.hint) console.log(`            ${it.hint}`);
+    console.log(`            plan:  ${fazSayfasi(it.p)}`);
+    console.log(`            işle:  atolye ${it.id} ${Math.min(n + 1, tavan(it))} -y`);
+  } else {
+    console.log('  Tüm çekirdek maddeler eşiği geçti. Kalanlar seçmeli.');
+  }
+
+  console.log(`\n  BU HAFTA  ${sa(h.buHafta)} sa · toplam ${sa(h.toplamSaat)} sa / ${h.seans} seans`);
+  if (h.gunOldu != null) {
+    console.log(`  SON SEANS ${h.gunOldu === 0 ? 'bugün' : h.gunOldu === 1 ? 'dün' : h.gunOldu + ' gün önce'}`);
+  }
+
+  const acik = d.journal.filter(e => e.anlamadim).slice(-2);
+  if (acik.length) {
+    console.log('\n  AÇIK SORULAR');
+    for (const e of acik) console.log(`    · ${e.anlamadim}  (${e.date})`);
+  }
+  console.log();
+}
+
+function rapor(d) {
+  const h = hesap(muf, d);
+  console.log(`\nRapor — ${bugunIso()}`);
+  console.log(`Çekirdek %${h.genel} · toplam ${sa(h.toplamSaat)} sa / ${h.seans} seans\n`);
+
+  const seri = h.haftaSaatleri(12);
+  const enCok = Math.max(...seri.map(x => x.saat), 1);
+  console.log('Son 12 hafta:');
+  for (const w of seri) {
+    const dolu = Math.round(20 * w.saat / enCok);
+    console.log(`  ${w.hafta}  ${'█'.repeat(dolu)}${'·'.repeat(20 - dolu)} ${sa(w.saat).padStart(5)} sa`);
+  }
+
+  const esk = h.esikler();
+  console.log('\nFazlar (eşik = kapının sağlanabileceği en düşük çekirdek %):');
+  for (const p of muf.phases) {
+    const durum = { gecildi: 'GEÇİLDİ', suruyor: 'sürüyor', baslamadi: 'başlamadı', yok: '—' }[h.kapi(p.id)];
+    const e = esk.find(x => x.id === p.id);
+    const kalan = h.kapiyaKalan(p.id).length;
+    console.log(`  ${p.tag.padEnd(6)} ${cubuk(h.fazYuzdesi(p.id))} %${String(h.fazYuzdesi(p.id)).padEnd(4)} ` +
+      `${durum.padEnd(10)} eşik %${e ? e.pct.toFixed(1) : '—'}` + (kalan ? ` · ${kalan} madde kaldı` : ''));
+  }
+
+  const ogr = d.journal.filter(e => e.ogrendim).slice(-5);
+  if (ogr.length) {
+    console.log('\nSon öğrendiklerin:');
+    for (const e of ogr) console.log(`  · ${e.ogrendim}  (${e.date})`);
+  }
+  console.log();
+}
+
+function liste(d, fid) {
+  const h = hesap(muf, d);
+  for (const p of muf.phases) {
+    if (fid && p.id !== fid) continue;
+    console.log(`\n${p.tag} — ${p.name}`);
+    for (const it of h.fazMaddeleri(p.id)) {
+      const ad = basamakAdlari(muf, it), n = h.n(it.id);
+      console.log(`  [${it.id.padEnd(4)}] ${it.core ? 'Ç' : ' '} ${n}/${tavan(it)} ${ad[n].padEnd(22)} ${it.lbl}`);
+    }
+  }
+  console.log();
+}
+
+function seansEkle(d, yay) {
+  /* git commit kalıbı: şablonu $EDITOR'de aç, yorum satırlarını at.
+     Tarayıcıda bir form ve onun senkron makinesi yerine 15 satır. */
+  const sablon =
+`# LLM Atölyesi — seans notu. Yorum satırları (#) yok sayılır.
+# Boş bırakırsan seans kaydedilmez.
+saat:
+faz: ${hesap(muf, d).sonraki ? hesap(muf, d).sonraki.p : 'z'}
+yaptim:
+ogrendim:
+anlamadim:
+yarin:
+`;
+  const dizin = mkdtempSync(join(tmpdir(), 'atolye-'));
+  const yol = join(dizin, 'SEANS');
+  writeFileSync(yol, sablon, 'utf8');
+  const ed = process.env.EDITOR || process.env.VISUAL || 'nano';
+  const r = spawnSync(ed, [yol], { stdio: 'inherit' });
+  if (r.error) { console.error(`Düzenleyici açılamadı (${ed}).`); rmSync(dizin, { recursive: true, force: true }); return; }
+
+  const metin = readFileSync(yol, 'utf8');
+  rmSync(dizin, { recursive: true, force: true });
+
+  const alan = {};
+  for (const satir of metin.split('\n')) {
+    if (satir.trim().startsWith('#')) continue;
+    const m = satir.match(/^(saat|faz|yaptim|ogrendim|anlamadim|yarin):\s*(.*)$/);
+    if (m) alan[m[1]] = m[2].trim();
+  }
+  const saat = parseFloat(String(alan.saat).replace(',', '.')) || 0;
+  if (!saat && !alan.yaptim) return console.log('Boş seans — kaydedilmedi.');
+
+  d.journal.push({
+    date: bugunIso(), hours: saat,
+    yaptim: alan.yaptim || '', ogrendim: alan.ogrendim || '',
+    anlamadim: alan.anlamadim || '', yarin: alan.yarin || ''
+  });
+  yaz(d);
+  console.log(`Seans kaydedildi: ${sa(saat)} sa. Bu hafta ${sa(hesap(muf, d).buHafta)} sa.`);
+  if (yay) yayinla(`seans: ${bugunIso()} (${sa(saat)} sa)` + (alan.yaptim ? ` — ${alan.yaptim.slice(0, 60)}` : ''));
+}
+
+/* ---------------- yönlendirme ---------------- */
+const argv = process.argv.slice(2);
+const yay = argv.includes('-y') || argv.includes('--yayinla');
+const arg = argv.filter(a => a !== '-y' && a !== '--yayinla');
+const d = oku();
+
+const komut = arg[0];
+
+if (!komut) {
+  bugun(d);
+} else if (komut === 'rapor') {
+  rapor(d);
+} else if (komut === 'liste') {
+  liste(d, arg[1]);
+} else if (komut === 'seans') {
+  seansEkle(d, yay);
+} else if (komut === 'yayinla') {
+  yayinla(arg[1] || `defter: ${bugunIso()}`);
+} else if (komut === 'site') {
+  spawnSync(process.execPath, [join(KOK, 'serve.mjs')], { stdio: 'inherit' });
+} else if (madde(komut)) {
+  /* atolye f1a 3 — anahtar kelime yok, doğrudan madde */
+  const it = madde(komut);
+  const n = parseInt(arg[1], 10);
+  if (!(n >= 0 && n <= tavan(it))) {
+    console.error(`HATA: ${it.id} için basamak 0–${tavan(it)} arası olmalı.`);
+    process.exit(1);
+  }
+  if (!basamakAta(d, it, n)) {
+    console.log(`${it.lbl} zaten ${n}. basamakta.`);
+  } else {
+    yaz(d);
+    const ad = basamakAdlari(muf, it);
+    console.log(`${it.lbl} → ${n} (${ad[n]})`);
+    const h = hesap(muf, d);
+    if (h.kapi(it.p) === 'gecildi') console.log(`🎉 ${faz(it.p).tag} kapısı geçildi.`);
+    if (yay) yayinla(`defter: ${it.id} → ${n} (${ad[n]})`);
+  }
+} else {
+  console.error(`Bilinmeyen komut: ${komut}\n` +
+    'atolye | atolye <madde> <basamak> | atolye seans | atolye rapor | atolye liste [faz] | atolye yayinla | atolye site');
+  process.exit(1);
+}

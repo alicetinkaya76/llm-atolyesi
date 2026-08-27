@@ -2,15 +2,16 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.github.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="atolye-kok" content="../">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Faz 0 — Karpathy Serisi</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="../stil.css">
 </head>
 <body>
-<div class="wrap" style="--pc: var(--f0)">
-  <p class="kicker"><a href="../index.html">← atölye</a> · <a href="../harita.html">harita</a> · <a href="../defter.html">defter</a></p>
+<div class="wrap" data-faz="f0">
+  <p class="kicker"><a href="../index.html">← atölye</a> · <a href="../harita.html">harita</a></p>
   <p><span class="tag">FAZ 0</span></p>
   <h1>Karpathy'nin sıfırdan serisi</h1>
   <p class="lede">2–4 hafta, ~25–35 saat, $0. <a href="https://karpathy.ai/zero-to-hero.html">Zero to Hero</a> hâlâ kanonik giriş (Ağu 2026). Senin profilinde ilk üç ders hızlandırılmış, 4–5 ve 7 yavaş. Her ders için aynı döngü: izle → <strong>kapalı kitap yeniden yaz</strong> → egzersiz → Türkçe büküm → beş satır defter.</p>
@@ -23,31 +24,31 @@
   <div class="hafta">
     <h3>Hafta 1 — Autograd ve ilk modeller <span class="sure">· ders 1–3 · ~7 sa</span></h3>
     <ul class="plain">
-      <li><a class="madde" id="f0a" href="../defter.html#f0a" title="Defterde işaretle: f0a">f0a</a> Ders 1, micrograd (2s25): izle, sonra <a href="https://github.com/karpathy/micrograd">repo'ya bakmadan</a> kendi autograd'ını yaz (~150 satır). <strong>L4 egzersizi:</strong> bilinçli bir hata ek (ör. bir op'ta gradyan formülünü boz), sayısal gradyan kontrolüyle yakala — MPS vakandaki "sessiz bozulma" refleksinin antrenmanı.</li>
-      <li><a class="madde" id="f0b" href="../defter.html#f0b" title="Defterde işaretle: f0b">f0b</a> Ders 2–3 (bigram, MLP): 1.5–2x hızda; kodu yine kendin yaz ama bu kısımlar sende oturmuşsa hızlı geç.</li>
+      <li><span class="madde" id="f0a">f0a</span> Ders 1, micrograd (2s25): izle, sonra <a href="https://github.com/karpathy/micrograd">repo'ya bakmadan</a> kendi autograd'ını yaz (~150 satır). <strong>L4 egzersizi:</strong> bilinçli bir hata ek (ör. bir op'ta gradyan formülünü boz), sayısal gradyan kontrolüyle yakala — MPS vakandaki "sessiz bozulma" refleksinin antrenmanı.</li>
+      <li><span class="madde" id="f0b">f0b</span> Ders 2–3 (bigram, MLP): 1.5–2x hızda; kodu yine kendin yaz ama bu kısımlar sende oturmuşsa hızlı geç.</li>
     </ul>
   </div>
 
   <div class="hafta">
     <h3>Hafta 2 — Sinir ağı iç dünyası <span class="sure">· ders 4–5 · ~7 sa</span></h3>
     <ul class="plain">
-      <li><a class="madde" href="../defter.html#f0b" title="Defterde işaretle: f0b">f0b</a> Ders 4 (aktivasyonlar/BatchNorm) ve 5 ("Backprop Ninja"): <strong>yavaşla.</strong> Kendi kendine öğrenenlerin en büyük boşluğu burası. Backprop Ninja'yı gerçekten elle yap — her gradyanı türet, sonra PyTorch'la doğrula.</li>
+      <li><span class="madde">f0b</span> Ders 4 (aktivasyonlar/BatchNorm) ve 5 ("Backprop Ninja"): <strong>yavaşla.</strong> Kendi kendine öğrenenlerin en büyük boşluğu burası. Backprop Ninja'yı gerçekten elle yap — her gradyanı türet, sonra PyTorch'la doğrula.</li>
     </ul>
   </div>
 
   <div class="hafta">
     <h3>Hafta 3 — GPT + Türkçe büküm <span class="sure">· ders 6–7 · ~8 sa</span></h3>
     <ul class="plain">
-      <li><a class="madde" href="../defter.html#f0b" title="Defterde işaretle: f0b">f0b</a> Ders 6 (WaveNet): orta hız.</li>
-      <li><a class="madde" id="f0c" href="../defter.html#f0c" title="Defterde işaretle: f0c">f0c</a> Ders 7, "Let's build GPT" (1s56): serinin zirvesi. Attention bloğunu kapalı kitap yazana kadar bitmiş sayma.</li>
-      <li><a class="madde" id="f0d" href="../defter.html#f0d" title="Defterde işaretle: f0d">f0d</a> <a href="https://github.com/karpathy/makemore">makemore</a> Türkçe varyantı: <code>names.txt</code> → kendi yer adı/isim listen. Gözlem soruları: model ünlü uyumunu kaçıncı iterasyonda yakalıyor? Hangi ekleri "uyduruyor"? Deftere yaz.</li>
+      <li><span class="madde">f0b</span> Ders 6 (WaveNet): orta hız.</li>
+      <li><span class="madde" id="f0c">f0c</span> Ders 7, "Let's build GPT" (1s56): serinin zirvesi. Attention bloğunu kapalı kitap yazana kadar bitmiş sayma.</li>
+      <li><span class="madde" id="f0d">f0d</span> <a href="https://github.com/karpathy/makemore">makemore</a> Türkçe varyantı: <code>names.txt</code> → kendi yer adı/isim listen. Gözlem soruları: model ünlü uyumunu kaçıncı iterasyonda yakalıyor? Hangi ekleri "uyduruyor"? Deftere yaz.</li>
     </ul>
   </div>
 
   <div class="hafta">
     <h3>Hafta 4 — Bitirme sınavı <span class="sure">· ~5 sa</span></h3>
     <ul class="plain">
-      <li><a class="madde" id="f0e" href="../defter.html#f0e" title="Defterde işaretle: f0e">f0e</a> <a href="https://karpathy.github.io/2026/02/12/microgpt/">microgpt</a> (Şub 2026): ~200 satır saf Python'da tokenizer + autograd + transformer + Adam. Önce <code>train0.py→train5.py</code> merdivenini oku; sonra <strong>boş dosyadan yeniden türet</strong>. Başarırsan Faz 0 kapısı hak edilmiş demektir; zemindeki z4 öz-testini de burada tekrarla.</li>
+      <li><span class="madde" id="f0e">f0e</span> <a href="https://karpathy.github.io/2026/02/12/microgpt/">microgpt</a> (Şub 2026): ~200 satır saf Python'da tokenizer + autograd + transformer + Adam. Önce <code>train0.py→train5.py</code> merdivenini oku; sonra <strong>boş dosyadan yeniden türet</strong>. Başarırsan Faz 0 kapısı hak edilmiş demektir; zemindeki z4 öz-testini de burada tekrarla.</li>
     </ul>
   </div>
 
@@ -62,5 +63,6 @@
 
   <p class="foot"><a href="zemin.html">← Zemin</a> · Sonraki: <a href="faz1.html">Faz 1 — Tokenizer + Türkçe</a></p>
 </div>
+<script type="module" src="../app.js"></script>
 </body>
 </html>

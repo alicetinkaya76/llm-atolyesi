@@ -9,12 +9,7 @@
    · Hiçbir sayı elle yazılmaz, hepsi koddan üretilir. */
 (function () {
   'use strict';
-  var A = window.Atolye, B = window.BPE;
-
-  var YEREL_MI = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
-  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0 && !YEREL_MI) {
-    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(function () {});
-  }
+  var B = window.BPE;
 
   function $(id) { return document.getElementById(id); }
   function el(tag, cls, html) {
@@ -23,7 +18,14 @@
     if (html != null) n.innerHTML = html;
     return n;
   }
-  function esc(x) { return A ? A.esc(x) : String(x); }
+  /* Kullanıcının kendi metni innerHTML'e giriyor; kaçış burada zorunlu.
+     (Eskiden atolye.js'ten geliyordu ve o yüklenmezse String(x)'e düşüyordu
+     — yani kaçışsız. Artık yerel ve koşulsuz.) */
+  function esc(x) {
+    return String(x)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
 
   /* Gömülü örnek: kamu malı, morfolojik olarak zengin, kısa.
      (Ziya Gökalp, "Turan" — 1911; telif süresi dolmuş.) */

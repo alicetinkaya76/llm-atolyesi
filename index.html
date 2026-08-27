@@ -2,107 +2,14 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.github.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
-<meta name="atolye-repo" content="alicetinkaya76/llm-atolyesi">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="atolye-kok" content="./">
 <title>LLM Atölyesi</title>
-<meta name="description" content="Sıfırdan LLM öğrenme atölyesi: ustalık merdiveni, faz kapıları, seans defteri.">
-<link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#111d1a">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Atölye">
-<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<meta name="description" content="Sıfırdan LLM öğrenme atölyesi: yol haritası, ustalık merdiveni, faz kapıları, tokenizer tezgâhı.">
 <link rel="icon" href="./ikon-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="./stil.css">
-<style>
-  /* ---- pano: yalnızca bu sayfaya özgü parçalar ---- */
-  .hero {
-    background: var(--surface); border: 1px solid var(--line);
-    border-left: 5px solid var(--pc, var(--accent));
-    border-radius: 0 14px 14px 0; padding: 1.1rem 1.3rem; margin: 1.4rem 0 1rem;
-  }
-  .hero .ust {
-    font-family: "IBM Plex Mono", monospace; font-size: 0.68rem;
-    letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
-  }
-  .hero .baslik {
-    font-family: "Bricolage Grotesque", sans-serif; font-weight: 700;
-    font-size: 1.22rem; line-height: 1.25; margin: 0.3rem 0 0.35rem;
-  }
-  .hero .alt { font-size: 0.92rem; color: var(--muted); margin: 0.2rem 0; }
-  .hero .eylem { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.8rem; }
-  .dugme {
-    font-family: "Bricolage Grotesque", sans-serif; font-weight: 650; font-size: 0.85rem;
-    background: var(--accent); color: var(--bg); border: none; border-radius: 8px;
-    padding: 0.45rem 0.9rem; cursor: pointer; text-decoration: none; display: inline-block;
-  }
-  .dugme:hover { background: var(--accent-ink); color: var(--bg); }
-  .dugme.ikincil { background: transparent; color: var(--accent); border: 1px solid var(--line); }
-  .dugme.ikincil:hover { border-color: var(--accent); color: var(--accent-ink); background: transparent; }
-  .dugme:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-  .rakamlar { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: 0.6rem; margin: 1rem 0; }
-  .rakam { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0.65rem 0.85rem; }
-  .rakam .v {
-    font-family: "IBM Plex Mono", monospace; font-size: 1.3rem; font-weight: 600;
-    font-variant-numeric: tabular-nums; line-height: 1.2;
-  }
-  .rakam .l { font-size: 0.76rem; color: var(--muted); margin-top: 0.1rem; }
-  .rakam .ek { font-family: "IBM Plex Mono", monospace; font-size: 0.66rem; color: var(--muted); }
-  .mini { height: 0.35rem; border-radius: 3px; background: var(--surface-2); overflow: hidden; margin-top: 0.4rem; }
-  .mini i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
-
-  /* SVG'yi doğal boyutunun üstüne esnetme: yoksa hücreler ve etiketler
-     orantısız büyür. Dar ekranda küçülmesi serbest. */
-  .isi { margin: 0.4rem 0 0.2rem; }
-  .isi svg { display: block; width: 100%; max-width: var(--isi-genislik, 22rem); height: auto; }
-  .isi-alt {
-    display: flex; justify-content: space-between; align-items: center; gap: 0.6rem;
-    font-family: "IBM Plex Mono", monospace; font-size: 0.66rem; color: var(--muted); margin-top: 0.3rem;
-  }
-  .isi-olcek { display: flex; align-items: center; gap: 0.25rem; }
-  .isi-olcek i { width: 0.62rem; height: 0.62rem; border-radius: 2px; display: inline-block; }
-
-  .fazlar-liste { display: grid; gap: 0.4rem; margin: 0.8rem 0 0; }
-  .faz-satir {
-    display: flex; align-items: center; gap: 0.65rem;
-    background: var(--surface); border: 1px solid var(--line);
-    border-left: 3px solid var(--pc); border-radius: 0 9px 9px 0;
-    padding: 0.5rem 0.75rem; text-decoration: none; color: var(--text);
-  }
-  .faz-satir:hover { border-color: var(--accent); border-left-color: var(--pc); }
-  .faz-satir .etiket { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; width: 3.4rem; flex-shrink: 0; color: var(--muted); }
-  .faz-satir .ad { flex: 1; min-width: 6rem; font-size: 0.92rem; }
-  .faz-satir .cubuk { width: 5.5rem; height: 0.5rem; border-radius: 3px; background: var(--surface-2); overflow: hidden; flex-shrink: 0; }
-  .faz-satir .cubuk i { display: block; height: 100%; border-radius: 3px; }
-  .faz-satir .yuzde { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; width: 2.6rem; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .faz-satir .kapi { font-family: "IBM Plex Mono", monospace; font-size: 0.6rem; width: 5.6rem; text-align: right; color: var(--muted); flex-shrink: 0; }
-  .faz-satir .kapi.on { color: var(--ok); font-weight: 600; }
-  @media (max-width: 30rem) {
-    .faz-satir .kapi { display: none; }
-    .faz-satir .cubuk { width: 3.5rem; }
-  }
-
-  .yorunge, .tazelik-kutu {
-    background: var(--surface); border: 1px solid var(--line);
-    border-radius: 12px; padding: 0.8rem 1rem; margin: 1rem 0;
-  }
-  .baslik-mini {
-    font-family: "IBM Plex Mono", monospace; font-size: 0.68rem;
-    letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
-    margin-bottom: 0.5rem;
-  }
-  .yorunge .cizim svg { display: block; width: 100%; height: auto; color: var(--text); }
-  .yorunge details { margin-top: 0.6rem; }
-  .yorunge details summary { cursor: pointer; margin-bottom: 0.4rem; }
-  .yorunge table { font-size: 0.82rem; }
-  .kestirim-metin { font-size: 0.86rem; color: var(--muted); margin-top: 0.5rem; }
-  .tazelik-kutu ul.plain li { font-size: 0.9rem; }
-
-  .uyari { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 0.6rem 0.9rem; font-size: 0.86rem; color: var(--muted); margin: 0.8rem 0; }
-</style>
 </head>
 <body>
 <div class="wrap">
@@ -110,37 +17,46 @@
   <h1>LLM Atölyesi</h1>
   <p class="lede">Paul Graham'ın tavsiyesinin işletilmiş hâli: LLM'leri sıfırdan kurmayı öğren, sonra elindeki donanımla eğitebildiğin en güçlü <em>Türkçe</em> modeli eğit.</p>
 
-  <div id="pano" aria-live="polite">
-    <p class="uyari" id="yukleniyor">durum.json okunuyor…</p>
+  <div id="pano" aria-live="polite"><p class="uyari">durum.json okunuyor…</p></div>
+
+  <div class="cards">
+    <a class="card" href="harita.html"><span class="t">Yol haritası</span><span class="d">6 faz + zemin: doğrulanmış kaynaklar, maliyet merdiveni, çekirdek rota. Haftalık planlar buradan dallanır.</span></a>
+    <a class="card" href="tezgah.html"><span class="t">Tokenizer tezgâhı</span><span class="d">Faz 1'in egzersizi çalışır hâlde: kendi metninde gerçek BPE eğit, Türkçe'nin nerede hasar gördüğünü gör.</span></a>
   </div>
 
-  <h2>Faz planları</h2>
-  <p class="small">Her sayfa o fazı haftalara böler: somut egzersizler, komutlar, kendi korpuslarına bağlanan notlar ve kapı tanımı.</p>
-  <div class="fazlar-liste" id="faz-listesi"></div>
+  <h2>Nasıl işliyor</h2>
+  <p>Üç dosya, üç iş: <code>mufredat.json</code> ne öğrenileceğini, <code>durum.json</code> nerede olunduğunu tutar, <code>fazlar/</code> haftalık planları taşır. Bu sayfa <strong>salt okunurdur</strong> — yazan tek şey terminaldir. Dolayısıyla "tarayıcıdaki taslak ile depodaki durumu uzlaştırma" diye bir sorun yok; o sorunu çözecek bütün makine de yok.</p>
 
-  <div class="cards" style="margin-top:1.6rem">
-    <a class="card" href="harita.html"><span class="t">🧱 Yol Haritası</span><span class="d">6 faz, doğrulanmış kaynaklar, maliyet merdiveni, çekirdek rota</span></a>
-    <a class="card" href="defter.html"><span class="t">📓 Atölye Defteri</span><span class="d">Ustalık merdiveni, faz kapıları, seans günlüğü</span></a>
-    <a class="card" href="tezgah.html"><span class="t">🔬 Tokenizer Tezgâhı</span><span class="d">Faz 1'in egzersizi çalışır hâlde: kendi metninde gerçek BPE eğit, Türkçe'nin nerede hasar gördüğünü gör</span></a>
-  </div>
+  <pre><code>atolye              # bugün ne açacağım?
+atolye z1 3 -y      # basamak ata → kaydet → commit → push
+atolye seans        # $EDITOR'de seans notu (git commit kalıbı)
+atolye rapor        # son 12 hafta + faz durumu
+atolye liste f1     # bir fazın madde kimlikleri</code></pre>
+
+  <h2>Ustalık merdiveni</h2>
+  <p>İşaret kutusu yok: videoyu izlemekle boş dosyadan yeniden yazmak aynı şey değil. Her <em>yap</em> maddesi beş basamakta durur —</p>
+  <ol class="steps">
+    <li><b>bütünü gördüm</b> — izledim/okudum, akış oturdu</li>
+    <li><b>kapalı kitap yazdım</b> — kaynağa bakmadan yeniden ürettim</li>
+    <li><b>egzersiz/test yeşil</b> — kendi iddiamı denetledim</li>
+    <li><b>Türkçe büküm + defter</b> — kendi korpusuma uyguladım ve not aldım</li>
+  </ol>
+  <p class="small"><em>Oku</em> maddeleri iki basamaklıdır (<span class="mono">okudum · deftere özetledim</span>). Eşik, <em>yap</em> için 3, <em>oku</em> için 2'dir; bazı maddelerin tavanı müfredatta daha düşük tutulur (örn. <span class="mono">z1</span> için 3), o zaman eşik tavana kırpılır.</p>
+
+  <h2>Kapı kuralı</h2>
+  <p>Bir faz, <strong>çekirdek (Ç) maddelerinin tümü eşikteyse ve en az biri tavandaysa</strong> geçilmiş sayılır. İkinci şart kasıtlı: her şeyi "yeterince" yapıp hiçbirini sonuna kadar götürmemek, bu müfredatın en olası başarısızlık biçimi.</p>
+  <p class="small">Merdivendeki eşik yüzdeleri elle yazılmaz; müfredattan türetilir (<code>atolye.mjs → esikler()</code>) ve bir testte bağımsız simülasyonla karşılaştırılır. Son kapı %100'de değildir — kalan pay merdivenin 4. basamağıdır ve hiçbir kapının şartı değildir.</p>
 
   <h2>Çalışma sözleşmesi</h2>
   <ul class="plain">
-    <li><strong>Seans döngüsü:</strong> bütünü gör → <strong>kapalı kitap yeniden yaz</strong> → egzersizi koştur → Türkçe'ye bük → beş satır defter.</li>
-    <li><strong>Ritim:</strong> haftada 2 derin blok (2–3 sa) + 1 hafif blok (1–2 sa); hedef 8–10 sa.</li>
-    <li><strong>Kapı kuralı:</strong> çekirdek maddelerin tümü ≥ 3 (oku: ≥ 2) ve en az biri tavanda.</li>
-    <li><strong>Kanıt:</strong> her seans bir commit; "kapalı kitap yazdım" iddiasının kanıtı commit'tir.</li>
+    <li><b>Seans döngüsü:</b> bütünü gör → <b>kapalı kitap yeniden yaz</b> → egzersizi koştur → Türkçe'ye bük → beş satır defter.</li>
+    <li><b>Ritim:</b> haftada 2 derin blok (2–3 sa) + 1 hafif blok. Hedef sayacı ve seri (streak) yok; ölçüt kapılar, saatler yalnızca bağlamdır.</li>
+    <li><b>Kanıt:</b> her seans bir commit. "Kapalı kitap yazdım" diyorsan commit'ini gösterebilmelisin; çalışma dosyaları <code>zemin/</code>, <code>faz0/</code> … klasörlerinde durur.</li>
+    <li><b>Yarın ilk iş:</b> seansı kapatırken bir satır yaz. Panonun en üstündeki not odur — sistemdeki tek gerçekten ileriye dönük veri, çünkü bağlam sıcakken sen yazdın.</li>
   </ul>
 
-  <h2>Terminal</h2>
-  <pre><code>atolye                 # bugün ne yapmalıyım
-atolye seviye z1 3 -y  # basamak ata + commit + push
-atolye rapor           # haftalık retro</code></pre>
-
-  <p class="foot">Veri: <code>durum.json</code> + <code>mufredat.json</code> · araç: <code>defter.py</code> · Statik site: ilerleme verisi hiçbir dış servise gönderilmez (yazı tipleri Google Fonts'tan yüklenir).</p>
+  <p class="foot">Veri: <code>durum.json</code> + <code>mufredat.json</code> · matematik tek yerde: <code>atolye.mjs</code>, denetimi <code>node --test atolye.test.mjs</code> · ilerleme verisi hiçbir dış servise gönderilmez (yalnızca yazı tipleri Google Fonts'tan yüklenir).</p>
 </div>
-
-<script src="./atolye.js"></script>
-<script src="./pano.js"></script>
+<script type="module" src="./app.js"></script>
 </body>
 </html>

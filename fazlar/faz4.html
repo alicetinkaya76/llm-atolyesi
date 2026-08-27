@@ -2,15 +2,16 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.github.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="atolye-kok" content="../">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Faz 4 — Post-training ve Eval</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="../stil.css">
 </head>
 <body>
-<div class="wrap" style="--pc: var(--f4)">
-  <p class="kicker"><a href="../index.html">← atölye</a> · <a href="../harita.html">harita</a> · <a href="../defter.html">defter</a></p>
+<div class="wrap" data-faz="f4">
+  <p class="kicker"><a href="../index.html">← atölye</a> · <a href="../harita.html">harita</a></p>
   <p><span class="tag inkdark">FAZ 4</span></p>
   <h1>Post-training ve değerlendirme</h1>
   <p class="lede">1–2 ay, ~60–100 saat, $0–50. Base modelden chat modeline asgari güvenilir yol: <strong>SFT → DPO → (doğrulanabilir görev varsa) GRPO</strong>. Kural değişmedi: her tekniği önce sıfırdan yaz, sonra üretim API'siyle (TRL) tekrarla. 2023 tarihli PPO içeriği okuma — devir GRPO devri, TRL v1'de PPO deneysel rafa kalktı.</p>
@@ -23,24 +24,24 @@
   <div class="hafta">
     <h3>Hafta 1–2 — SFT + DPO sıfırdan <span class="sure">· ~15 sa · Mac yeter</span></h3>
     <ul class="plain">
-      <li><a class="madde" id="f4a" href="../defter.html#f4a" title="Defterde işaretle: f4a">f4a</a> <a href="https://github.com/rasbt/LLMs-from-scratch">Raschka bl. 7</a> (talimat fine-tune, düz PyTorch) + bonus <strong>DPO from scratch</strong> defteri. Chat template kavramını burada mühürle — kendi kendine öğrenenlerin en sık atladığı parça.</li>
-      <li><a class="madde" id="f4d" href="../defter.html#f4d" title="Defterde işaretle: f4d">f4d</a> Paralel okuma: <a href="https://rlhfbook.com/">RLHF Book</a> (Lambert) çekirdek bölümler: SFT, reward model, DPO, policy gradient/GRPO. <a href="https://rlhfbook.com/course">Video kursu</a> (13 ders, Ağu 2026'da tamamlandı) hafif bloklara.</li>
+      <li><span class="madde" id="f4a">f4a</span> <a href="https://github.com/rasbt/LLMs-from-scratch">Raschka bl. 7</a> (talimat fine-tune, düz PyTorch) + bonus <strong>DPO from scratch</strong> defteri. Chat template kavramını burada mühürle — kendi kendine öğrenenlerin en sık atladığı parça.</li>
+      <li><span class="madde" id="f4d">f4d</span> Paralel okuma: <a href="https://rlhfbook.com/">RLHF Book</a> (Lambert) çekirdek bölümler: SFT, reward model, DPO, policy gradient/GRPO. <a href="https://rlhfbook.com/course">Video kursu</a> (13 ders, Ağu 2026'da tamamlandı) hafif bloklara.</li>
     </ul>
   </div>
 
   <div class="hafta">
     <h3>Hafta 3–4 — Üretim katmanı: TRL + mlx-lm <span class="sure">· ~15 sa</span></h3>
     <ul class="plain">
-      <li><a class="madde" id="f4b" href="../defter.html#f4b" title="Defterde işaretle: f4b">f4b</a> <a href="https://huggingface.co/docs/trl/index">TRL v1</a>: bir SFT + bir DPO koşusu (küçük model, küçük veri — amaç API'yi tanımak). <a href="https://huggingface.co/learn/smol-course/unit0/1">smol-course</a>'u rehber olarak kullan.</li>
-      <li><a class="madde" id="f4c" href="../defter.html#f4c" title="Defterde işaretle: f4c">f4c</a> <a href="https://github.com/ml-explore/mlx-lm">mlx-lm LoRA</a>: kendi Türkçe talimat setinle cihazda fine-tune → GGUF → ollama. Sıfır bulut maliyeti.</li>
+      <li><span class="madde" id="f4b">f4b</span> <a href="https://huggingface.co/docs/trl/index">TRL v1</a>: bir SFT + bir DPO koşusu (küçük model, küçük veri — amaç API'yi tanımak). <a href="https://huggingface.co/learn/smol-course/unit0/1">smol-course</a>'u rehber olarak kullan.</li>
+      <li><span class="madde" id="f4c">f4c</span> <a href="https://github.com/ml-explore/mlx-lm">mlx-lm LoRA</a>: kendi Türkçe talimat setinle cihazda fine-tune → GGUF → ollama. Sıfır bulut maliyeti.</li>
     </ul>
   </div>
 
   <div class="hafta">
     <h3>Hafta 5–6 — Eval disiplini + GRPO <span class="sure">· ~15–20 sa</span></h3>
     <ul class="plain">
-      <li><a class="madde" id="f4f" href="../defter.html#f4f" title="Defterde işaretle: f4f">f4f</a> <a href="https://github.com/EleutherAI/lm-evaluation-harness">lm-eval-harness</a>: her aşamada önce/sonra ölçüm rutinini kur. <strong>Özel YAML göreviyle kendi Türkçe benchmark'ını tanımla</strong> (ör. Alatlı korpusundan cloze soruları). <a href="https://huggingface.co/spaces/OpenEvals/evaluation-guidebook">Evaluation Guidebook</a>: "iyileşti" derken kendini nasıl kandırmazsın. Çok dilli görevler için <a href="https://github.com/huggingface/lighteval">lighteval</a> yedek.</li>
-      <li><a class="madde" id="f4e" href="../defter.html#f4e" title="Defterde işaretle: f4e">f4e</a> <a href="https://www.manning.com/books/build-a-reasoning-model-from-scratch">Build a Reasoning Model (From Scratch)</a> (Haz 2026'da çıktı) bl. 5–7: sıfırdan GRPO. Ardından API karşılığı: <a href="https://huggingface.co/learn/llm-course/chapter12/1">HF course ch12</a> ile TRL GRPOTrainer. Doğrulanabilir görevin yoksa (matematik/kod gibi) GRPO'yu erteleyebilirsin — SFT+DPO capstone için yeterli.</li>
+      <li><span class="madde" id="f4f">f4f</span> <a href="https://github.com/EleutherAI/lm-evaluation-harness">lm-eval-harness</a>: her aşamada önce/sonra ölçüm rutinini kur. <strong>Özel YAML göreviyle kendi Türkçe benchmark'ını tanımla</strong> (ör. Alatlı korpusundan cloze soruları). <a href="https://huggingface.co/spaces/OpenEvals/evaluation-guidebook">Evaluation Guidebook</a>: "iyileşti" derken kendini nasıl kandırmazsın. Çok dilli görevler için <a href="https://github.com/huggingface/lighteval">lighteval</a> yedek.</li>
+      <li><span class="madde" id="f4e">f4e</span> <a href="https://www.manning.com/books/build-a-reasoning-model-from-scratch">Build a Reasoning Model (From Scratch)</a> (Haz 2026'da çıktı) bl. 5–7: sıfırdan GRPO. Ardından API karşılığı: <a href="https://huggingface.co/learn/llm-course/chapter12/1">HF course ch12</a> ile TRL GRPOTrainer. Doğrulanabilir görevin yoksa (matematik/kod gibi) GRPO'yu erteleyebilirsin — SFT+DPO capstone için yeterli.</li>
     </ul>
   </div>
 
@@ -57,5 +58,6 @@
 
   <p class="foot"><a href="faz3.html">← Faz 3</a> · Sonraki: <a href="faz5.html">Faz 5 — Capstone</a></p>
 </div>
+<script type="module" src="../app.js"></script>
 </body>
 </html>

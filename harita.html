@@ -2,213 +2,16 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.github.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sıfırdan LLM Yol Haritası</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<style>
-  :root {
-    --bg: #f6f9f8;
-    --surface: #ffffff;
-    --surface-2: #eef4f2;
-    --text: #1a2523;
-    --muted: #566762;
-    --line: #dbe5e1;
-    --accent: #1e7d78;
-    --accent-ink: #135b57;
-    --code-bg: #eaf1ef;
-    /* viridis faz rampası — tema değişmez */
-    --f0: #440154; --f1: #414487; --f2: #2a788e;
-    --f3: #22a884; --f4: #7ad151; --f5: #fde725;
-    --badge-ink-dark: #1a2418;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #0f1715;
-      --surface: #17211e;
-      --surface-2: #1d2926;
-      --text: #e5edea;
-      --muted: #97a8a2;
-      --line: #26332f;
-      --accent: #4cc0a9;
-      --accent-ink: #6fd3bf;
-      --code-bg: #1d2926;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #0f1715;
-    --surface: #17211e;
-    --surface-2: #1d2926;
-    --text: #e5edea;
-    --muted: #97a8a2;
-    --line: #26332f;
-    --accent: #4cc0a9;
-    --accent-ink: #6fd3bf;
-    --code-bg: #1d2926;
-  }
-
-  * { box-sizing: border-box; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
-    font-size: 1.05rem;
-    line-height: 1.65;
-    margin: 0;
-    padding: 0;
-  }
-  .wrap { max-width: 46rem; margin: 0 auto; padding: 2.5rem 1.25rem 5rem; }
-
-  h1, h2, h3 {
-    font-family: "Bricolage Grotesque", "Avenir Next", "Helvetica Neue", sans-serif;
-    line-height: 1.15;
-    text-wrap: balance;
-  }
-  h1 { font-size: clamp(2rem, 6vw, 3rem); font-weight: 800; margin: 0.5rem 0 0.75rem; letter-spacing: -0.01em; }
-  h2 { font-size: 1.5rem; font-weight: 700; margin: 3rem 0 0.9rem; }
-  h3 { font-size: 1.12rem; font-weight: 650; margin: 1.6rem 0 0.5rem; }
-  p { margin: 0.75rem 0; }
-  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
-  a:hover { color: var(--accent-ink); }
-  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
-  code, .mono {
-    font-family: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
-    font-size: 0.85em;
-    background: var(--code-bg);
-    border-radius: 4px;
-    padding: 0.08em 0.35em;
-  }
-  .kicker {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 0.78rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .lede { font-size: 1.15rem; color: var(--muted); margin-top: 0; }
-
-  .quote {
-    border-left: 3px solid var(--accent);
-    background: var(--surface);
-    padding: 0.9rem 1.1rem;
-    margin: 1.5rem 0;
-    border-radius: 0 8px 8px 0;
-    font-style: italic;
-    color: var(--muted);
-  }
-  .quote .who { display: block; font-style: normal; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; margin-top: 0.4rem; }
-
-  /* faz genel bakış şeridi */
-  .overview {
-    display: flex; flex-wrap: wrap; gap: 0.5rem;
-    margin: 1.5rem 0 0.5rem;
-  }
-  .overview a.ph {
-    flex: 1 1 8.5rem;
-    display: block;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 0.7rem 0.8rem;
-    text-decoration: none;
-    color: var(--text);
-  }
-  .overview a.ph:hover { border-color: var(--accent); }
-  .overview .dot { width: 0.85rem; height: 0.85rem; border-radius: 50%; display: inline-block; margin-bottom: 0.35rem; }
-  .overview .nm { display: block; font-family: "Bricolage Grotesque", sans-serif; font-weight: 650; font-size: 0.92rem; line-height: 1.25; }
-  .overview .dur { display: block; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); margin-top: 0.25rem; }
-
-  /* faz blokları */
-  .phase {
-    border-left: 4px solid var(--pc, var(--accent));
-    background: var(--surface);
-    border-radius: 0 12px 12px 0;
-    padding: 1.4rem 1.5rem 0.5rem;
-    margin: 2rem 0;
-  }
-  .phase .tag {
-    display: inline-block;
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    padding: 0.18em 0.65em;
-    border-radius: 999px;
-    background: var(--pc, var(--accent));
-    color: #fff;
-    margin-bottom: 0.3rem;
-  }
-  .phase .tag.inkdark { color: var(--badge-ink-dark); }
-  .phase h2 { margin: 0.2rem 0 0.2rem; font-size: 1.35rem; }
-  .phase .dur { font-family: "IBM Plex Mono", monospace; font-size: 0.8rem; color: var(--muted); }
-  .goal { font-style: italic; color: var(--muted); }
-
-  ul.res { list-style: none; margin: 1rem 0 1.2rem; padding: 0; display: grid; gap: 0.65rem; }
-  ul.res li {
-    background: var(--surface-2);
-    border-radius: 8px;
-    padding: 0.65rem 0.85rem;
-  }
-  ul.res .meta {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 0.72rem;
-    color: var(--muted);
-    white-space: nowrap;
-  }
-  ul.res .top { display: flex; justify-content: space-between; gap: 0.75rem; align-items: baseline; flex-wrap: wrap; }
-  ul.res .desc { margin: 0.25rem 0 0; font-size: 0.94rem; color: var(--text); }
-  ul.res a { font-weight: 600; }
-
-  .deliv {
-    display: flex; gap: 0.6rem; align-items: baseline;
-    font-size: 0.95rem;
-    border-top: 1px dashed var(--line);
-    padding: 0.8rem 0 1rem;
-    margin-top: 0.4rem;
-  }
-  .deliv .lbl {
-    font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; font-weight: 600;
-    letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent);
-    flex-shrink: 0;
-  }
-
-  /* tablolar */
-  .tblwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; margin: 1.2rem 0; }
-  table { border-collapse: collapse; width: 100%; font-size: 0.92rem; background: var(--surface); }
-  th, td { text-align: left; padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--line); vertical-align: top; }
-  tr:last-child td { border-bottom: none; }
-  th {
-    font-family: "Bricolage Grotesque", sans-serif; font-weight: 650; font-size: 0.85rem;
-    background: var(--surface-2);
-  }
-  td.num, th.num { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; font-size: 0.84rem; white-space: nowrap; }
-
-  .callout {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 1.1rem 1.3rem;
-    margin: 1.5rem 0;
-  }
-  .callout h3 { margin-top: 0.2rem; }
-  .callout.accent { border-color: var(--accent); }
-
-  ul.plain { padding-left: 1.2rem; margin: 0.6rem 0; }
-  ul.plain li { margin: 0.45rem 0; }
-  ol.steps { padding-left: 1.3rem; margin: 0.6rem 0; }
-  ol.steps li { margin: 0.55rem 0; }
-  ol.steps li::marker { font-family: "IBM Plex Mono", monospace; font-weight: 600; color: var(--accent); }
-
-  .foot { color: var(--muted); font-size: 0.88rem; border-top: 1px solid var(--line); margin-top: 3.5rem; padding-top: 1.2rem; }
-  .small { font-size: 0.88rem; color: var(--muted); }
-
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
-</style>
+<link rel="stylesheet" href="./stil.css">
 </head>
 <body>
 
 <div class="wrap">
-  <p class="kicker"><a href="index.html" style="color:inherit;text-decoration:none">← atölye</a> · <a href="defter.html" style="color:inherit;text-decoration:none">defter</a> · kişisel öğrenme planı · ağustos 2026</p>
+  <p class="kicker"><a href="index.html">← atölye</a> · kişisel öğrenme planı · ağustos 2026</p>
   <h1>Sıfırdan LLM Yol Haritası</h1>
   <p class="lede">Paul Graham'ın "17 yaşında olsam LLM'leri sıfırdan kurmayı öğrenir, elimdeki donanımla eğitebildiğim en güçlü modeli eğitirdim" tavsiyesinin, Türkçe korpuslarla çalışan bir araştırmacı için işletilebilir hâli.</p>
 
@@ -225,12 +28,12 @@
   <p>Altı faz; toplam <strong>~300–500 saat</strong> (haftada 8–10 saatle 9–15 ay). Zorunlu nakit maliyet: <span class="mono">$60–150</span> bulut GPU kirası — hepsi bu. Renkler ML'cilerin loss grafiklerinden tanıdığı viridis skalası: koyu mordan sarıya, sıfırdan modele.</p>
 
   <div class="overview">
-    <a class="ph" href="#f0"><span class="dot" style="background:var(--f0)"></span><span class="nm">Zemin: Karpathy serisi</span><span class="dur">2–4 hafta</span></a>
-    <a class="ph" href="#f1"><span class="dot" style="background:var(--f1)"></span><span class="nm">Tokenizer + Türkçe</span><span class="dur">2–3 hafta</span></a>
-    <a class="ph" href="#f2"><span class="dot" style="background:var(--f2)"></span><span class="nm">İlk gerçek pretraining</span><span class="dur">4–6 hafta</span></a>
-    <a class="ph" href="#f3"><span class="dot" style="background:var(--f3)"></span><span class="nm">Derinlik: CS336</span><span class="dur">2–4 ay</span></a>
-    <a class="ph" href="#f4"><span class="dot" style="background:var(--f4)"></span><span class="nm">Post-training + eval</span><span class="dur">1–2 ay</span></a>
-    <a class="ph" href="#f5"><span class="dot" style="background:var(--f5)"></span><span class="nm">Capstone: nanochat + Türkçe model</span><span class="dur">1–2 ay</span></a>
+    <a class="ph" data-faz="f0" href="#f0"><span class="dot"></span><span class="nm">Zemin: Karpathy serisi</span><span class="dur">2–4 hafta</span></a>
+    <a class="ph" data-faz="f1" href="#f1"><span class="dot"></span><span class="nm">Tokenizer + Türkçe</span><span class="dur">2–3 hafta</span></a>
+    <a class="ph" data-faz="f2" href="#f2"><span class="dot"></span><span class="nm">İlk gerçek pretraining</span><span class="dur">4–6 hafta</span></a>
+    <a class="ph" data-faz="f3" href="#f3"><span class="dot"></span><span class="nm">Derinlik: CS336</span><span class="dur">2–4 ay</span></a>
+    <a class="ph" data-faz="f4" href="#f4"><span class="dot"></span><span class="nm">Post-training + eval</span><span class="dur">1–2 ay</span></a>
+    <a class="ph" data-faz="f5" href="#f5"><span class="dot"></span><span class="nm">Capstone: nanochat + Türkçe model</span><span class="dur">1–2 ay</span></a>
   </div>
 
   <!-- ============ ÇALIŞMA YÖNTEMİ ============ -->
@@ -251,13 +54,14 @@
   <h3>Haftalık ritim (8–10 saat)</h3>
   <p>Haftada <strong>2 derin blok</strong> (2–3'er saat; video + kod, bölünmesiz) + <strong>1 hafif blok</strong> (1–2 saat; makale, defter tekrarı, küçük deneyler). Derin blokları sabit takvim saatine bağla — "boş vakitte çalışırım" planı iki haftada ölür. Hafta sonu tek büyük blok da aynı işi görür.</p>
 
-  <h3>Takip sistemi: Atölye Defteri + tek repo</h3>
+  <h3>Takip sistemi: bir komut + tek repo</h3>
   <div class="callout accent">
-    <p style="margin-top:0"><strong><a href="defter.html">📓 LLM Atölye Defteri</a></strong> — bu haritanın canlı takip aracı, tamamen müstakil: veri depodaki <code>durum.json</code>'da yaşar, defter <code>python3 defter.py html</code> ile ondan üretilir. İşaretle/işaretleme yerine her madde <strong>beş basamaklı ustalık merdiveninde</strong> bir yere oturur: <span class="mono">0 başlamadım · 1 bütünü gördüm · 2 kapalı kitap yazdım · 3 egzersiz/test yeşil · 4 Türkçe büküm + defter</span> (okuma maddeleri: <span class="mono">okudum · özetledim</span>). Faz kapıları kendiliğinden hesaplanır: çekirdek maddelerin tümü ≥ 3 ve en az biri tavandaysa kapı geçilmiş sayılır. Seans günlüğü (yaptım / öğrendim / anlamadım / yarın) ve haftalık saat sayacı da defterin içinde; terminal tarafı için <code>python3 defter.py durum</code> aynı panoyu basar.</p>
+    <p class="ilk"><strong><code>atolye</code></strong> — bu haritanın canlı takip aracı. Veri depodaki <code>durum.json</code>'da yaşar; yazan tek şey terminaldir, <a href="index.html">atölye sayfası</a> ile haftalık plan sayfaları onu yalnızca okur. İşaretle/işaretleme yerine her madde <strong>beş basamaklı ustalık merdiveninde</strong> bir yere oturur: <span class="mono">0 başlamadım · 1 bütünü gördüm · 2 kapalı kitap yazdım · 3 egzersiz/test yeşil · 4 Türkçe büküm + defter</span> (okuma maddeleri: <span class="mono">okudum · özetledim</span>). Faz kapıları kendiliğinden hesaplanır: çekirdek maddelerin tümü eşikteyse <em>ve en az biri tavandaysa</em> kapı geçilmiş sayılır — ikinci şart, her şeyi "yeterince" yapıp hiçbirini sonuna kadar götürmeme eğilimine karşıdır.</p>
+    <p><span class="mono">atolye</span> bugün ne açılacağını söyler · <span class="mono">atolye f1a 3 -y</span> basamak atayıp commit'ler · <span class="mono">atolye seans</span> günlüğü <code>$EDITOR</code>'de açar (yaptım / öğrendim / anlamadım / yarın) · <span class="mono">atolye rapor</span> son 12 haftayı ve faz durumunu basar.</p>
   </div>
   <ul class="plain">
-    <li>Kod tarafı için tek bir git deposu aç (örn. <code>llm-atolyesi/</code>): faz başına bir klasör, her seans bir commit. Commit geçmişin ilerleme grafiğidir — ve defterdeki seviye iddialarının kanıtıdır: "kapalı kitap yazdım" diyorsan commit'ini gösterebilmelisin.</li>
-    <li>Haftada bir 15 dakikalık retro: defterin "bu hafta" sayacına bak, hangi kapıya yaklaştığını söyle, gelecek haftanın iki derin bloğunu takvime koy.</li>
+    <li>Kod tarafı için tek bir git deposu aç (örn. <code>llm-atolyesi/</code>): faz başına bir klasör, her seans bir commit. Commit geçmişin ilerleme grafiğidir — ve basamak iddialarının kanıtıdır: "kapalı kitap yazdım" diyorsan commit'ini gösterebilmelisin.</li>
+    <li>Haftada bir 15 dakikalık retro: <code>atolye rapor</code> çıktısına bak, hangi kapıya yaklaştığını söyle, gelecek haftanın iki derin bloğunu takvime koy.</li>
     <li>Momentum kuralı: her fazın <em>ilk günü</em> en küçük çalışan şeyi koştur (Faz 2'nin ilk günü mlx-gpt2'nin 10 dakikalık koşusu gibi). İki hafta boş geçtiyse planı değil giriş eşiğini küçült: çekirdek rotaya dön.</li>
   </ul>
 
@@ -290,7 +94,7 @@
   <p class="small">Toplam yatırım en fazla 8–14 saattir ve Faz 0'ın içine gömülebilir: micrograd zaten autograd'ı, makemore zaten tensör pratiğini verir. Buradaki kaynaklar "takıldığın anda başvur" içindir. Öz-testi Faz 0'ın sonunda tekrarla: model.py'da açıklayamadığın satır kalmadıysa Faz 2'ye hazırsın.</p>
 
   <!-- ============ FAZ 0 ============ -->
-  <div class="phase" id="f0" style="--pc: var(--f0)">
+  <div class="phase" id="f0" data-faz="f0">
     <span class="tag">FAZ 0</span>
     <h2>Zemin: Karpathy'nin sıfırdan serisi</h2>
     <p class="dur">2–4 hafta · ~25–35 saat · $0 · tamamı Mac'te çalışır · <a href="fazlar/faz0.html">haftalık plan →</a></p>
@@ -307,7 +111,7 @@
   </div>
 
   <!-- ============ FAZ 1 ============ -->
-  <div class="phase" id="f1" style="--pc: var(--f1)">
+  <div class="phase" id="f1" data-faz="f1">
     <span class="tag">FAZ 1</span>
     <h2>Tokenizer: Türkçe için en yüksek kaldıraç</h2>
     <p class="dur">2–3 hafta · ~20–30 saat · $0 · <a href="fazlar/faz1.html">haftalık plan →</a></p>
@@ -324,7 +128,7 @@
   </div>
 
   <!-- ============ FAZ 2 ============ -->
-  <div class="phase" id="f2" style="--pc: var(--f2)">
+  <div class="phase" id="f2" data-faz="f2">
     <span class="tag">FAZ 2</span>
     <h2>İlk gerçek pretraining koşuları</h2>
     <p class="dur">4–6 hafta · ~50–70 saat · $0–15 · <a href="fazlar/faz2.html">haftalık plan →</a></p>
@@ -343,7 +147,7 @@
   </div>
 
   <!-- ============ FAZ 3 ============ -->
-  <div class="phase" id="f3" style="--pc: var(--f3)">
+  <div class="phase" id="f3" data-faz="f3">
     <span class="tag">FAZ 3</span>
     <h2>Derinlik: Stanford CS336 omurgası</h2>
     <p class="dur">2–4 ay (seçmeli yoğunluk) · çekirdek ~60–80 sa, tam program 150–250 sa · $0–300 · <a href="fazlar/faz3.html">haftalık plan →</a></p>
@@ -360,7 +164,7 @@
   </div>
 
   <!-- ============ FAZ 4 ============ -->
-  <div class="phase" id="f4" style="--pc: var(--f4)">
+  <div class="phase" id="f4" data-faz="f4">
     <span class="tag inkdark">FAZ 4</span>
     <h2>Post-training ve değerlendirme</h2>
     <p class="dur">1–2 ay · ~60–100 saat · $0–50 · <a href="fazlar/faz4.html">haftalık plan →</a></p>
@@ -379,7 +183,7 @@
   </div>
 
   <!-- ============ FAZ 5 ============ -->
-  <div class="phase" id="f5" style="--pc: var(--f5)">
+  <div class="phase" id="f5" data-faz="f5">
     <span class="tag inkdark">FAZ 5</span>
     <h2>Capstone: nanochat + kendi Türkçe modelin</h2>
     <p class="dur">1–2 ay · $50–150 · <a href="fazlar/faz5.html">haftalık plan →</a></p>
