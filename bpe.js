@@ -15,8 +15,22 @@
       Aynı birleşmeleri üretir, kat kat hızlıdır.
    4. Artımlı çift sayacı. Her birleşmede baştan saymak O(birleşme × korpus)
       olurdu; yalnız etkilenen kelimeler güncellenir.
-   5. Belirlenimli. Eşit sayıdaki çiftlerde ilk görülen kazanır (Map ekleme
-      sırası), böylece aynı girdi hep aynı tokenizer'ı verir. */
+   5. NFC normalizasyonu. macOS ve bazı editörler NFD üretir: orada 'ğ'
+      g + U+0306 (3 bayt), 'ö' o + U+0308 (3 bayt) olur. Gözle aynı, token
+      akışı bambaşka; yarısı NFC yarısı NFD bir korpus frekans kütlesini
+      ikiye böler ve tokenizer sebepsiz kötüleşir. Girişte bir kez NFC'ye
+      çevriliyor ve arayüzde söyleniyor. ('ğüş' NFC'de 6, NFD'de 9 bayt.)
+   6. Belirlenimli — ve eşitlikler KURAL DIŞI DEĞİL, KURAL. Gerçek bir
+      korpusta birleşme adımlarının ~%61'i en az iki çiftin aynı sayıda
+      olduğu adımlardır; hangisinin kazandığı sözlüğü baştan aşağı değiştirir.
+      İki yerleşik kural var:
+        · minbpe: belgede İLK GÖRÜLEN çift kazanır (Python dict ekleme
+          sırasına dayanan, kodda hiç yazılmayan örtük bir kural).
+        · HF tokenizers: sözlük sırasına göre EN KÜÇÜK (a,b) çifti kazanır
+          (trainer.rs'te açıkça yazılı).
+      Burada HF kuralı seçildi: artımlı sayaç çiftleri silip yeniden
+      eklediği için "ilk görülen" sırası zamanla bozulur; en-küçük-çift
+      kuralı ise sıradan bağımsızdır, yani sonuç her koşuda aynıdır. */
 (function (global) {
   'use strict';
 
@@ -65,6 +79,16 @@
 
   function baytlar(s) { return Array.from(kodlayici.encode(s)); }
 
+  /* Girişte tek sefer NFC. Farkı ölçmek isteyen için ikisini de döndürür. */
+  function normalle(metin) {
+    var nfc = metin.normalize('NFC');
+    return {
+      metin: nfc,
+      degisti: nfc !== metin,
+      baytFarki: kodlayici.encode(metin).length - kodlayici.encode(nfc).length
+    };
+  }
+
   /* ---------- eğitim ---------- */
   /* secenek: { vocab, desen, ilerleme(fn) } */
   function egit(metin, secenek) {
@@ -93,7 +117,10 @@
     var sayac = new Map();        /* "a,b" -> adet */
     var iceren = new Map();       /* "a,b" -> Set(kelime indeksi) */
 
-    function anahtar(a, b) { return a + ',' + b; }
+    /* sayısal anahtar: string birleştirme 3-5 kat yavaş ve çöp üretir.
+       Token kimlikleri < 2^20 olduğu sürece güvenli (çarpım < 2^53). */
+    var K = 1 << 20;
+    function anahtar(a, b) { return a * K + b; }
 
     function kelimeCiftEkle(wi, isaret) {
       var w = kelimeler[wi], ids = w.ids;
@@ -117,13 +144,17 @@
 
     var sonrakiId = 256;
     while (sonrakiId < hedefVocab) {
-      /* en sık çift; eşitlikte ilk eklenen kazanır (belirlenimli) */
-      var enIyi = null, enCok = 0;
-      sayac.forEach(function (v, k) { if (v > enCok) { enCok = v; enIyi = k; } });
-      if (!enIyi || enCok < 2) break;   /* tekrar eden çift kalmadı */
+      /* En sık çift. EŞİTLİKTE: en küçük (a,b) kazanır — HF kuralı.
+         Anahtar a*2^20+b olduğu için sayısal karşılaştırma sözlük sırasıyla
+         aynı şeydir. Bu kural sıradan bağımsızdır: artımlı sayaç çiftleri
+         silip yeniden eklese de sonuç değişmez. */
+      var enIyi = -1, enCok = 0;
+      sayac.forEach(function (v, k) {
+        if (v > enCok || (v === enCok && enIyi >= 0 && k < enIyi)) { enCok = v; enIyi = k; }
+      });
+      if (enIyi < 0 || enCok < 2) break;   /* tekrar eden çift kalmadı */
 
-      var pr = enIyi.split(',');
-      var A = +pr[0], B = +pr[1];
+      var A = Math.floor(enIyi / K), B = enIyi % K;
       var yeniId = sonrakiId++;
       sozluk.set(yeniId, sozluk.get(A).concat(sozluk.get(B)));
 
@@ -209,7 +240,21 @@
     return b ? metinle(b) : '�';
   }
 
+  /* Tersinirlik: decode(encode(w)) === w. Bu bir PUAN değil KAPIDIR —
+     tersinir olmayan bir tokenizer üretim için geçersizdir. */
+  function tersinirMi(metin, model) {
+    var ids = kodla(metin, model);
+    var b = [];
+    ids.forEach(function (id) {
+      var v = model.sozluk.get(id);
+      if (v) for (var i = 0; i < v.length; i++) b.push(v[i]);
+    });
+    return metinle(b) === metin;
+  }
+
   global.BPE = {
+    normalle: normalle,
+    tersinirMi: tersinirMi,
     DESENLER: DESENLER,
     onParcala: onParcala,
     egit: egit,

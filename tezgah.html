@@ -72,6 +72,18 @@
     background: var(--surface-2); border-radius: 5px; padding: 0.12em 0.45em; white-space: pre; }
   .iz-adim i { color: var(--muted); font-size: 0.72em; font-style: normal; margin-right: 0.25em; }
 
+  .kiyas { display: grid; gap: 0.3rem; margin: 0.8rem 0; }
+  .kiyas-satir { display: flex; align-items: center; gap: 0.6rem; font-size: 0.82rem; }
+  .kiyas-ad { width: 14rem; flex-shrink: 0; }
+  .kiyas-cubuk { flex: 1; min-width: 4rem; height: 0.6rem; background: var(--surface-2);
+    border-radius: 3px; overflow: hidden; }
+  .kiyas-cubuk i { display: block; height: 100%; background: var(--muted); border-radius: 3px; }
+  .kiyas-v { font-family: "IBM Plex Mono", monospace; width: 2.6rem; text-align: right; font-variant-numeric: tabular-nums; }
+  .kiyas-not { font-family: "IBM Plex Mono", monospace; font-size: 0.62rem; color: var(--muted); width: 12rem; }
+  .kiyas-satir.ben { font-weight: 700; }
+  .kiyas-satir.ben .kiyas-cubuk i { background: var(--accent); }
+  @media (max-width: 34rem) { .kiyas-ad { width: 9rem; } .kiyas-not { display: none; } }
+
   tr.secili td { background: color-mix(in srgb, var(--accent) 10%, transparent); font-weight: 600; }
   #durum { font-family: "IBM Plex Mono", monospace; font-size: 0.8rem; color: var(--warn);
     display: none; margin: 0.5rem 0; }

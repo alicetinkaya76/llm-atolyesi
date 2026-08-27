@@ -145,6 +145,10 @@
     /* ana iş parçacığını kilitlememek için bir tık ertele */
     setTimeout(function () {
       var t0 = performance.now();
+      /* NFC: macOS/bazı editörler NFD üretir, orada 'ğ' 3 bayt olur ve
+         token akışı sessizce bozulur. Bir kez normalle, sonra söyle. */
+      var nrm = B.normalle(metin);
+      if (nrm.degisti) metin = nrm.metin;
       var b = ayir(metin);
       try {
         model = B.egit(b.egitim, { vocab: vocab, desen: desen });
@@ -156,6 +160,7 @@
         return;
       }
       sonMetin = metin;
+      model.nfcDuzeltildi = nrm.degisti ? nrm.baytFarki : 0;
       var sure = Math.round(performance.now() - t0);
       $('btn-egit').disabled = false;
       durum('');
@@ -184,8 +189,8 @@
       o.bayt + ' bayt, ' + o.token + ' token'));
     mk.appendChild(metrikKutu('sözlük', model.vocab,
       model.birlesmeler.length + ' birleşme · ' + sure + ' ms'));
-    mk.appendChild(metrikKutu('tam kelime', '%' + Math.round(o.tamKelimeOran * 100),
-      'kullanılan ' + o.turSayisi + ' token türünün payı'));
+    mk.appendChild(metrikKutu('%TR (kaba)', '%' + Math.round(o.tamKelimeOran * 100),
+      o.turSayisi + ' token türü · kıyas: genel LLM 40–51, Türkçe-özel 90'));
     kap.appendChild(mk);
     kap.appendChild(el('p', 'small',
       '<b>Fertility tek başına anlamsızdır</b> ve <b>eğitildiği metinde ölçülemez.</b> ' +
@@ -197,6 +202,49 @@
       ' Kıyas noktası aşağıdaki desen tablosudur.'));
 
     /* --- desen karşılaştırması: asıl bulgu --- */
+    /* tersinirlik: puan değil KAPI */
+    var tersinir = B.tersinirMi(olculen, model);
+    var tk = el('div', 'banner' + (tersinir ? '' : ' dikkat'));
+    tk.innerHTML = tersinir
+      ? '<b>Tersinirlik ✓</b> — çözümleme kodlamayı birebir geri veriyor. ' +
+        'Bu bir puan değil kapıdır: tersinir olmayan bir tokenizer üretim için geçersizdir.'
+      : '<b>Tersinirlik ✗</b> — decode(encode(x)) ≠ x. Bu tokenizer üretim için geçersiz olurdu.';
+    kap.appendChild(tk);
+
+    if (model.nfcDuzeltildi) {
+      kap.appendChild(el('div', 'banner',
+        'Metin NFC\'ye normalize edildi (' + model.nfcDuzeltildi + ' bayt fark). ' +
+        'macOS ve bazı editörler NFD üretir; orada "ğ" 2 değil 3 bayt olur ve ' +
+        'gözle aynı görünen metin bambaşka bir token akışı verir.'));
+    }
+
+    /* --- kıyas: fertility ancak referansla anlam kazanır --- */
+    kap.appendChild(el('h3', null, 'Bu sayı iyi mi kötü mü? Kıyas noktaları'));
+    var kmax = Math.max(o.fertility, 4);
+    var kl = el('div', 'kiyas');
+    KIYAS.concat([{ ad: 'SENİN TOKENIZER\'IN', v: o.fertility, not: 'bu sayfada, ayrılmış kesitte', ben: true }])
+      .sort(function (a, b2) { return a.v - b2.v; })
+      .forEach(function (k) {
+        var sat = el('div', 'kiyas-satir' + (k.ben ? ' ben' : ''));
+        sat.appendChild(el('span', 'kiyas-ad', esc(k.ad)));
+        var cb = el('div', 'kiyas-cubuk');
+        var ic = el('i');
+        ic.style.width = Math.min(100, 100 * k.v / kmax) + '%';
+        cb.appendChild(ic);
+        sat.appendChild(cb);
+        sat.appendChild(el('span', 'kiyas-v', k.v.toFixed(2)));
+        sat.appendChild(el('span', 'kiyas-not', esc(k.not)));
+        kl.appendChild(sat);
+      });
+    kap.appendChild(kl);
+    kap.appendChild(el('p', 'small',
+      '<b>Bunlar farklı korpuslarda ölçüldü</b> — mutlak karşılaştırma değil, ' +
+      'büyüklük mertebesi kıyası. Yine de asıl bilgi şudur: aynı yöntemle ' +
+      'İngilizce ~1,3 iken Türkçe ~1,5–1,6 çıkıyor. Fertility tanımı da ' +
+      'değişkendir; burada <b>boşlukla ayrılmış kelime</b> başına token ' +
+      'kullanılıyor (Ali vd. 2024 tanımı). Dilbilimsel kelime (UD) tanımı ' +
+      'noktalama işaretlerini ayrı saydığı için sayıyı %15–20 düşürür.'));
+
     kap.appendChild(el('h3', null, 'Ön-parçalama deseni ne kadar fark ediyor?'));
     var tablo = ['<div class="tblwrap"><table><thead><tr><th>Desen</th>' +
       '<th class="num">fertility</th><th class="num">token</th>' +
@@ -301,8 +349,29 @@
   }
 
   /* ---------- başlangıç ---------- */
+  /* Yayımlanmış kıyas noktaları. Fertility tek başına anlamsızdır; ancak
+     bir referansla anlam kazanır. Hepsi kaynaklı ve tanımı yazılı — farklı
+     korpuslarda ölçüldükleri için MUTLAK karşılaştırma değil, BÜYÜKLÜK
+     MERTEBESİ kıyasıdır ve öyle etiketlenir. */
+  var KIYAS = [
+    { ad: 'İngilizce, BERT (GLUE)', v: 1.29, not: 'TrGLUE §3.4.5' },
+    { ad: 'Türkçe, BERTurk 32k (TrGLUE)', v: 1.58, not: 'TrGLUE §3.4.5 — aynı ölçüm' },
+    { ad: 'Türkçe, BPE 64k (denetimli)', v: 1.51, not: 'Morpheus Tablo 5, aynı korpus' },
+    { ad: 'Türkçe, Morfessor', v: 1.91, not: 'Morpheus Tablo 5' },
+    { ad: 'Türkçe, GPT-4 cl100k (Kaşağı)', v: 3.10, not: 'ölçüm — yayımlanmış değil' },
+    { ad: 'Türkçe, GPT-4o o200k (Kaşağı)', v: 2.50, not: 'ölçüm — yayımlanmış değil' }
+  ];
+
   function kur() {
     $('metin').value = ORNEK;
+    /* gerçek, tanınan bir kamu malı metin: Kaşağı (Ömer Seyfettin, 1916) */
+    fetch('ornek/kasagi.txt').then(function (r) {
+      if (!r.ok) throw 0;
+      return r.text();
+    }).then(function (t) {
+      $('metin').value = t;
+      egit();
+    }).catch(function () { /* dosyadan açıldıysa gömülü metinle devam */ });
     $('deneme').value = "Türkiye'nin başkenti Ankara'dır; evlerimizden çalışıyorduk.";
 
     var desenSec = $('desen');
