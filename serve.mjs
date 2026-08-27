@@ -2,7 +2,7 @@
 // (GitHub Pages'in yaptığını yerelde yapar; hiçbir bağımlılık yok.)
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { join, extname, dirname } from 'node:path';
+import { join, extname, dirname, relative, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -23,7 +23,12 @@ createServer(async (req, res) => {
     let path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
     if (path.endsWith('/')) path += 'index.html';
     const file = join(ROOT, path);
-    if (!file.startsWith(ROOT)) throw new Error('kök dışı');
+    /* startsWith(ROOT) ayraç içermediği için yetmez: adı ROOT ile başlayan
+       her kardeş klasör (llm-atolyesi-yedek, llm-atolyesi.bak …) kontrolü
+       geçiyordu. relative() ile bakınca kök dışı yol ya '..' ile başlar ya
+       da mutlaktır. */
+    const bagil = relative(ROOT, file);
+    if (bagil.startsWith('..') || isAbsolute(bagil)) throw new Error('kök dışı');
     const body = await readFile(file);
     res.writeHead(200, {
       'content-type': MIME[extname(file)] || 'application/octet-stream',

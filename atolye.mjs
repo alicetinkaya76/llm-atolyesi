@@ -17,8 +17,14 @@ export function tavan(it) {
 export function esik(it) {
   return Math.min(it && it.t === 'yap' ? 3 : 2, tavan(it));
 }
+/* Basamak adları. mufredat.json elle düzenlenen tek kaynak olduğu için
+   `t` alanına levels'ta karşılığı olmayan bir tür yazılması gerçekçi;
+   o durumda ad yerine sayı basılır, çağıran taraf çökmez. */
 export function basamakAdlari(muf, it) {
-  return ((muf.levels && muf.levels[it.t]) || []).slice(0, tavan(it) + 1);
+  const ham = (muf.levels && muf.levels[it.t]) || [];
+  const out = [];
+  for (let i = 0; i <= tavan(it); i++) out.push(ham[i] != null ? ham[i] : 'basamak ' + i);
+  return out;
 }
 export function fazSayfasi(pid) {
   return pid === 'z' ? 'fazlar/zemin.html' : 'fazlar/faz' + String(pid).slice(1) + '.html';
@@ -122,6 +128,28 @@ export function hesap(muf, durum, bugun) {
     return fazMaddeleri(pid).some(i => n(i.id) > 0) ? 'suruyor' : 'baslamadi';
   }
 
+  /* Bir fazın kapısı için EKSİK KALAN iş — {it, hedef} listesi.
+     Kapı kuralının İKİ yarısını da sayar. Eskiden yalnız eşik-altı
+     maddeleri sayıyordu; "biri tavanda" şartı eksikken de 0 döndürüyordu,
+     yani kapı açıkken pano "kalan yok" diyordu. Tek çekirdek maddesi bile
+     tavana çıkmamış bir fazda burası artık o maddeyi de listeler. */
+  function kapiyaKalan(pid) {
+    const fc = fazMaddeleri(pid).filter(i => i.core);
+    if (!fc.length) return [];
+    const out = fc.filter(i => n(i.id) < esik(i)).map(i => ({ it: i, hedef: esik(i) }));
+    if (!fc.some(i => n(i.id) >= tavan(i))) {
+      /* "En ucuz": tavana en az basamak kalan. Eşitlikte müfredat sırası. */
+      let ucuz = fc[0];
+      for (const i of fc) {
+        if (tavan(i) - n(i.id) < tavan(ucuz) - n(ucuz.id)) ucuz = i;
+      }
+      const v = out.find(x => x.it.id === ucuz.id);
+      if (v) v.hedef = tavan(ucuz);
+      else out.push({ it: ucuz, hedef: tavan(ucuz) });
+    }
+    return out;
+  }
+
   /* Kapının SAĞLANABİLECEĞİ en düşük çekirdek yüzdesi. Fazlar sırayla
      tamamlandığı varsayımıyla kümülatif; elle yazılmaz, müfredattan çıkar.
      "En az biri tavanda" için EN UCUZ maddeyi tavana çıkarmak yeter. */
@@ -143,8 +171,23 @@ export function hesap(muf, durum, bugun) {
     return out;
   }
 
-  /* Sıradaki iş: müfredat sırasındaki ilk eşik-altı çekirdek madde. */
-  const sonraki = items.find(i => i.core && n(i.id) < esik(i)) || null;
+  /* Sıradaki iş: kapısı henüz geçilmemiş ilk fazın eksik işi.
+     DİKKAT — burası bir kez yanlıştı ve yanlışlığı tam da müfredatın
+     uyardığı davranışa sürüklüyordu: yalnız "eşik-altı çekirdek madde"
+     aranıyordu, yani kapı kuralının ikinci yarısı ("en az biri tavanda")
+     hiçbir zaman iş üretmiyordu. Bütün çekirdek maddeler tam eşiğe
+     çekildiğinde araç "bitti, kalanlar seçmeli" diyordu — oysa FAZ 3'ün
+     kapısı açıktı, çünkü o fazın üç çekirdek maddesinin de eşiği (3)
+     tavanından (4) düşük. Her şeyi "yeterince" yapıp hiçbirini sonuna
+     kadar götürmemek: aracın kendisi buna yönlendiriyordu. */
+  let sonraki = null, sonrakiHedef = 0;
+  for (const p of phases) {
+    const eksik = kapiyaKalan(p.id);
+    if (!eksik.length) continue;
+    sonraki = eksik[0].it;
+    sonrakiHedef = eksik[0].hedef;
+    break;
+  }
 
   /* Bir önceki seansın "yarın ilk iş" notu — sistemdeki tek gerçekten
      ileriye dönük veri; kullanıcı bağlam sıcakken kendi yazmış. */
@@ -184,11 +227,14 @@ export function hesap(muf, durum, bugun) {
   }
 
   return {
-    n, fazMaddeleri, kapi, esikler, haftaSaatleri,
+    n, fazMaddeleri, kapi, esikler, haftaSaatleri, kapiyaKalan,
     genel,
-    fazYuzdesi: pid => yuzde(fazMaddeleri(pid)),
-    kapiyaKalan: pid => fazMaddeleri(pid).filter(i => i.core && n(i.id) < esik(i)),
-    sonraki, sonYarin,
+    /* ÇEKİRDEK yüzdesi — genel yüzdeyle aynı taban. Eskiden fazın bütün
+       maddelerini sayıyordu, o yüzden "geçildi" yazan bir satırın çubuğu
+       %75'te durabiliyordu (seçmeli madde ortalamayı aşağı çekiyordu). */
+    fazYuzdesi: pid => yuzde(fazMaddeleri(pid).filter(i => i.core)),
+    sonraki, sonrakiHedef,
+    sonYarin,
     buHafta, toplamSaat,
     seans: durum.journal.length,
     sonTarih, gunOldu

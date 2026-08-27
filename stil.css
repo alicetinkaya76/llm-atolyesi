@@ -29,7 +29,7 @@
     --text: #e5edea; --muted: #97a8a2; --line: #26332f;
     --accent: #4cc0a9; --accent-ink: #6fd3bf; --code-bg: #1d2926;
     --warn: #e08b4a; --ok: #4cc0a9; --f5: #fde725;
-    --f0: #8a4ba0; --f1: #6674cc;
+    --f0: #8a4ba0; --f1: #5e6dc9;   /* beyaz mürekkeple 4.26 → 4.66; AA sınırı 4.5 */
     --fz-bar: #8ea39d; --f0-bar: #a765bd; --f1-bar: #6674cc; --f2-bar: #41a0ba;
     --f3-bar: #22a884; --f4-bar: #7ad151; --f5-bar: #fde725;
   }
@@ -39,7 +39,7 @@
   --text: #e5edea; --muted: #97a8a2; --line: #26332f;
   --accent: #4cc0a9; --accent-ink: #6fd3bf; --code-bg: #1d2926;
   --warn: #e08b4a; --ok: #4cc0a9; --f5: #fde725;
-  --f0: #8a4ba0; --f1: #6674cc;
+  --f0: #8a4ba0; --f1: #5e6dc9;   /* beyaz mürekkeple 4.26 → 4.66; AA sınırı 4.5 */
   --fz-bar: #8ea39d; --f0-bar: #a765bd; --f1-bar: #6674cc; --f2-bar: #41a0ba;
   --f3-bar: #22a884; --f4-bar: #7ad151; --f5-bar: #fde725;
 }
@@ -47,14 +47,20 @@
 /* Faz kimliği tek yerden dağıtılır: bir öğeye data-faz="f3" yaz, o öğe ve
    altındaki her şey doğru --pc / --pc-bar değerini alır. Böylece sayfalarda
    style="--pc: var(--f3)" gibi satır-içi stil kalmıyor ve CSP'den
-   'unsafe-inline' tamamen çıkarılabiliyor. */
-[data-faz="z"]  { --pc: var(--fz); --pc-bar: var(--fz-bar); }
-[data-faz="f0"] { --pc: var(--f0); --pc-bar: var(--f0-bar); }
-[data-faz="f1"] { --pc: var(--f1); --pc-bar: var(--f1-bar); }
-[data-faz="f2"] { --pc: var(--f2); --pc-bar: var(--f2-bar); }
-[data-faz="f3"] { --pc: var(--f3); --pc-bar: var(--f3-bar); }
-[data-faz="f4"] { --pc: var(--f4); --pc-bar: var(--f4-bar); }
-[data-faz="f5"] { --pc: var(--f5); --pc-bar: var(--f5-bar); }
+   'unsafe-inline' tamamen çıkarılabiliyor.
+   --pc-ink, rozetin mürekkebi, aynı yerden gelir. Elle yazılan bir
+   `class="tag inkdark"` iki sayfada farklı yazılabiliyordu ve yazıldı da:
+   FAZ 3 rozeti faz3.html'de koyu mürekkeple 5.35:1 iken harita.html'de
+   beyazla 3.00:1 çıkıyordu — aynı rozet, bir sayfada AA'nın altında.
+   Seçim artık faza bağlı ve iki temada da aynı (aşağıdaki ölçümler
+   WCAG bağıl parlaklık formülüyle; hepsi ≥ 4.5:1). */
+[data-faz="z"]  { --pc: var(--fz); --pc-bar: var(--fz-bar); --pc-ink: #fff; }               /* 5.29 */
+[data-faz="f0"] { --pc: var(--f0); --pc-bar: var(--f0-bar); --pc-ink: #fff; }               /* 15.24 açık · 5.84 koyu */
+[data-faz="f1"] { --pc: var(--f1); --pc-bar: var(--f1-bar); --pc-ink: #fff; }               /* 8.74 açık · 4.66 koyu */
+[data-faz="f2"] { --pc: var(--f2); --pc-bar: var(--f2-bar); --pc-ink: #fff; }               /* 5.03 */
+[data-faz="f3"] { --pc: var(--f3); --pc-bar: var(--f3-bar); --pc-ink: var(--badge-ink-dark); }  /* 5.35 */
+[data-faz="f4"] { --pc: var(--f4); --pc-bar: var(--f4-bar); --pc-ink: var(--badge-ink-dark); }  /* 8.45 */
+[data-faz="f5"] { --pc: var(--f5); --pc-bar: var(--f5-bar); --pc-ink: var(--badge-ink-dark); }  /* 10.02 açık · 12.70 koyu */
 
 /* ---------- taban ---------- */
 * { box-sizing: border-box; }
@@ -118,9 +124,8 @@ ol.steps li::marker { font-family: "IBM Plex Mono", monospace; font-weight: 600;
   display: inline-block; font-family: "IBM Plex Mono", monospace;
   font-size: 0.71rem; font-weight: 600; letter-spacing: 0.08em;
   padding: 0.18em 0.65em; border-radius: 999px;
-  background: var(--pc, var(--accent)); color: #fff;
+  background: var(--pc, var(--accent)); color: var(--pc-ink, #fff);
 }
-.tag.inkdark { color: var(--badge-ink-dark); }
 
 /* ---------- tablolar ---------- */
 .tblwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; margin: 1.15rem 0; }
@@ -193,6 +198,7 @@ ul.res a { font-weight: 600; }
 .basamak {
   font-family: "IBM Plex Mono", monospace; font-size: 0.64rem;
   color: var(--muted); font-variant-numeric: tabular-nums; margin-left: 0.25em;
+  white-space: nowrap;   /* "3/4" eğik çizgide bölünmesin */
 }
 
 /* ---------- index kartları ---------- */
@@ -321,6 +327,15 @@ textarea { width: 100%; min-height: 8rem; resize: vertical; line-height: 1.5; }
 textarea.kisa { min-height: 4rem; }
 input[type=range].genis { width: 16rem; }
 textarea:focus, select:focus, input:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+
+/* Tezgâhın kapı/uyarı şeridi. Bu kuralların tek tanımı silinen defter.html'in
+   gömülü <style>'ındaydı; taşınırken unutulmuş ve tersinirlik kapısı biçimsiz
+   düz metin olarak çıkıyordu — yani en önemli beyanı en zayıf görünen şeydi. */
+.banner {
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px;
+  padding: 0.55rem 0.85rem; font-size: 0.86rem; color: var(--muted); margin: 0.7rem 0;
+}
+.banner.dikkat { border-color: var(--warn); color: var(--text); }
 
 .metrikler { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.6rem; margin: 1.2rem 0; }
 .metrik { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0.65rem 0.85rem; }

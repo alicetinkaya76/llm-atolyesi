@@ -32,7 +32,8 @@ app.js          sayfa arayüzü         (salt okunur)
 ln -sf ~/Desktop/llm-atolyesi/atolye /usr/local/bin/atolye
 ```
 
-Bağımlılık yok; Node 18+ yeter.
+Bağımlılık yok. Node 18+ olmalı (`node:test`, ESM, `?.`); geliştirme ve
+test makinesi v22.22.2 — daha eskisinde denenmedi.
 
 ## Günlük kullanım
 
@@ -45,8 +46,9 @@ atolye liste f1     # bir fazın madde kimlikleri
 atolye site         # yerel önizleme → http://localhost:8933
 ```
 
-`-y` (`--yayinla`): `durum.json` commit'lenip push'lanır, site birkaç dakika
-içinde güncellenir. Unutursan sonra `atolye yayinla`.
+`-y` (`--yayinla`): **yalnız** `durum.json` commit'lenip push'lanır — komut yol
+sınırlamasıyla çalışır, o sırada hazırlanmış başka dosyalar commit'e girmez
+(girmediyse söylenir). Unutursan sonra `atolye yayinla`.
 
 ## Ustalık merdiveni ve kapı kuralı
 
@@ -66,7 +68,10 @@ biri tavandaysa* geçilir. İkinci şart kasıtlı — her şeyi "yeterince" yap
 hiçbirini sonuna kadar götürmemek bu müfredatın en olası başarısızlık biçimi.
 
 Panodaki eşik yüzdeleri elle yazılmaz; müfredattan türetilir
-(`atolye.mjs → esikler()`) ve testte bağımsız bir simülasyonla karşılaştırılır.
+(`atolye.mjs → esikler()`). Testte kaba kuvvetle doğrulanır: her fazın çekirdek
+maddelerine verilebilecek bütün basamak dizilimleri (en büyük faz için 5⁷ =
+78.125) sayılır, kapıyı geçenler arasındaki en ucuzu bulunur ve formülün payıyla
+karşılaştırılır — yani "en düşük" iddiası formülden bağımsız sınanır.
 Son kapı %100'de **değildir**: kalan pay 4. basamaktır ve hiçbir kapının şartı
 değildir. Bu gizlenmiyor, panoda yazıyor.
 
@@ -92,8 +97,8 @@ gerçekten ileriye dönük veri, çünkü bağlam sıcakken sen yazdın.
 | `mufredat.json` | Müfredat: 42 madde, 7 faz, ustalık basamakları (tek kaynak) |
 | `durum.json` | İlerlemenin tek kaynağı — git ile izlenir |
 | `atolye.mjs` | İlerleme matematiği (tek uygulama) |
-| `atolye` | Terminal arayüzü ve `durum.json`'un tek yazıcısı |
-| `atolye.test.mjs` | `node --test atolye.test.mjs` — 11 test |
+| `atolye` | Terminal arayüzü ve `durum.json`'un tek yazıcısı (atomik yazma: tmp + rename) |
+| `atolye.test.mjs` | `node --test atolye.test.mjs` — 15 test |
 | `app.js` | Sayfaların salt-okunur betiği (pano + madde rozetleri) |
 | `index.html` | Pano: kendine not · sıradaki iş · kapı merdiveni · saatler |
 | `harita.html` | Yol haritası (6 faz + zemin, kaynaklar, maliyet merdiveni) |
@@ -108,8 +113,10 @@ gerçekten ileriye dönük veri, çünkü bağlam sıcakken sen yazdın.
 `tezgah.html` Faz 1'in egzersizini anlatmaz, **çalıştırır**: kendi metnini
 ver, tarayıcıda gerçek byte-level BPE eğitilsin. Kütüphane yok — `bpe.js`
 sıfırdan ~200 satır. Ölçüm dürüstlüğü kuralları koda gömülü: fertility
-eğitildiği metinde ölçülmez (%80 eğitim / %20 ölçüm), örneklem boyutu her
-zaman yazılır, hiçbir sayı elle girilmez.
+eğitildiği metinde ölçülmez (%80 eğitim / %20 ölçüm; ayrılan kesit 8 kelimeden
+kısa kalırsa geri düşer ve bunu ekranda söyler), örneklem boyutu her zaman
+yazılır. Kullanıcının hiçbir sayısı elle girilmez; elle yazılı tek küme, sayfada
+öyle işaretlenen "kıyas noktaları" (yayımlanmış fertility ve %TR ölçümleri).
 
 ## Yayınlama
 
@@ -125,8 +132,20 @@ Bu depo bir ara PWA servis çalışanı, komut paleti, klavye kısayolları,
 tarayıcıdan-depoya-yazma token'ı, kanıt/tazelik/kestirim katmanları ve
 Python ile JS'te iki kez yazılmış bir ilerleme matematiği (artı ikisini
 tutarlı tutan bir çapraz test) taşıyordu. Hiçbiri "bugün ne açacağım"
-sorusunun cevabını değiştirmiyordu; ölçme aygıtı ölçtüğü müfredatın üç katı
-büyüklüğe çıkmıştı. Hepsi git geçmişinde duruyor.
+sorusunun cevabını değiştirmiyordu. Hepsi git geçmişinde duruyor.
+
+Ölçü, kendi kuralımıza uymak için tekrar üretilebilir olmalı — izlenen
+kod ve içerik dosyalarının satır sayısı (`8f57f18` → `ce0aef3`):
+
+```bash
+git ls-tree -r --name-only <ref> | grep -E '(\.(json|js|mjs|html|css|sh|py)$|^atolye$)' \
+  | while read f; do git show "$ref:$f" | wc -l; done | paste -sd+ - | bc
+# 8f57f18 → 6607 · ce0aef3 → 3046
+```
+
+Bu sayı bir kez yanlış yazıldı: `ce0aef3`'ün commit mesajında "6090 → 3174"
+yazıyor ve 6090 hiçbir tanımla yeniden üretilemiyor (aynı ölçütle 6607, tüm
+metin dosyalarıyla 6905). Commit mesajı değiştirilemez; doğrusu burada.
 
 Tazelik katmanının tavsiyesi kayıp değil, yeri değişti: müfredatın kendisi
 onu nedeniyle birlikte söylüyor (`z4`: "Faz 0'ın sonunda testi tekrarla").

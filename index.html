@@ -17,7 +17,10 @@
   <h1>LLM Atölyesi</h1>
   <p class="lede">Paul Graham'ın tavsiyesinin işletilmiş hâli: LLM'leri sıfırdan kurmayı öğren, sonra elindeki donanımla eğitebildiğin en güçlü <em>Türkçe</em> modeli eğit.</p>
 
-  <div id="pano" aria-live="polite"><p class="uyari">durum.json okunuyor…</p></div>
+  <!-- Yer tutucu metin, betik hiç çalışmasa da DOĞRU kalacak şekilde yazılı:
+       "okunuyor…" deseydi ve app.js yüklenemeseydi sayfa sonsuza kadar
+       okumadığı bir şeyi okuyor iddia ederdi. -->
+  <div id="pano" aria-live="polite"><p class="uyari">İlerleme panosu burada görünür. Boş kaldıysa sayfa dosya olarak açılmış olabilir; bir sunucu gerekiyor: <code>atolye site</code>. Terminal her hâlükârda çalışır: <code>atolye</code></p></div>
 
   <div class="cards">
     <a class="card" href="harita.html"><span class="t">Yol haritası</span><span class="d">6 faz + zemin: doğrulanmış kaynaklar, maliyet merdiveni, çekirdek rota. Haftalık planlar buradan dallanır.</span></a>
@@ -30,7 +33,7 @@
   <pre><code>atolye              # bugün ne açacağım?
 atolye z1 3 -y      # basamak ata → kaydet → commit → push
 atolye seans        # $EDITOR'de seans notu (git commit kalıbı)
-atolye rapor        # son 12 hafta + faz durumu
+atolye rapor        # son 12 hafta + faz durumu + kalan işler
 atolye liste f1     # bir fazın madde kimlikleri</code></pre>
 
   <h2>Ustalık merdiveni</h2>
@@ -45,7 +48,7 @@ atolye liste f1     # bir fazın madde kimlikleri</code></pre>
 
   <h2>Kapı kuralı</h2>
   <p>Bir faz, <strong>çekirdek (Ç) maddelerinin tümü eşikteyse ve en az biri tavandaysa</strong> geçilmiş sayılır. İkinci şart kasıtlı: her şeyi "yeterince" yapıp hiçbirini sonuna kadar götürmemek, bu müfredatın en olası başarısızlık biçimi.</p>
-  <p class="small">Merdivendeki eşik yüzdeleri elle yazılmaz; müfredattan türetilir (<code>atolye.mjs → esikler()</code>) ve bir testte bağımsız simülasyonla karşılaştırılır. Son kapı %100'de değildir — kalan pay merdivenin 4. basamağıdır ve hiçbir kapının şartı değildir.</p>
+  <p class="small">Merdivendeki eşik yüzdeleri elle yazılmaz; müfredattan türetilir (<code>atolye.mjs → esikler()</code>) ve bir testte kaba kuvvetle sınanır: fazın çekirdek maddelerine verilebilecek bütün basamak dizilimleri sayılıp kapıyı geçenlerin en ucuzu bulunur. Son kapı %100'de değildir — kalan pay merdivenin 4. basamağıdır ve hiçbir kapının şartı değildir.</p>
 
   <h2>Çalışma sözleşmesi</h2>
   <ul class="plain">

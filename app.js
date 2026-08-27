@@ -47,7 +47,9 @@ function pano(muf, durum) {
     kap.appendChild(k);
   }
 
-  /* 2) Sıradaki iş. */
+  /* 2) Sıradaki iş — kapısı geçilmemiş ilk fazın eksik işi. Hedef her zaman
+     eşik değildir: fazın hiçbir çekirdek maddesi tavanda değilse kapı için
+     gereken iş bir maddeyi TAVANA çıkarmaktır. */
   const kutu = el('div', 'siradaki');
   if (h.sonraki) {
     const it = h.sonraki, ad = basamakAdlari(muf, it), n = h.n(it.id);
@@ -56,16 +58,20 @@ function pano(muf, durum) {
     kutu.appendChild(el('div', 'ust', 'sıradaki iş · ' + esc(p ? p.tag : it.p)));
     kutu.appendChild(el('div', 'baslik', esc(it.lbl)));
     kutu.appendChild(el('div', 'alt',
-      esc(ad[n]) + ' → <b>' + esc(ad[esik(it)]) + '</b>'));
+      esc(ad[n]) + ' → <b>' + esc(ad[h.sonrakiHedef]) + '</b>'));
+    if (h.sonrakiHedef >= tavan(it)) {
+      kutu.appendChild(el('div', 'alt',
+        esc((p ? p.tag : it.p) + ' kapısı için bir maddenin tavana çıkması gerekiyor.')));
+    }
     if (it.hint) kutu.appendChild(el('div', 'alt', esc(it.hint)));
     const a = el('a', 'dugme', 'Haftalık plana git');
     a.href = kok + fazSayfasi(it.p);
     kutu.appendChild(a);
     kutu.appendChild(el('div', 'kod', 'atolye ' + esc(it.id) + ' ' +
-      Math.min(n + 1, tavan(it)) + ' -y'));
+      Math.min(n + 1, h.sonrakiHedef) + ' -y'));
   } else {
     kutu.appendChild(el('div', 'ust', 'durum'));
-    kutu.appendChild(el('div', 'baslik', 'Tüm çekirdek maddeler eşiği geçti.'));
+    kutu.appendChild(el('div', 'baslik', 'Bütün kapılar geçildi. Kalanlar seçmeli.'));
   }
   kap.appendChild(kutu);
 
@@ -88,13 +94,18 @@ function pano(muf, durum) {
     satir.appendChild(el('span', 'esik', '%' + e.pct.toFixed(0)));
     const kalan = h.kapiyaKalan(e.id).length;
     satir.appendChild(el('span', 'not-kucuk',
-      durumu === 'gecildi' ? 'geçildi' : kalan ? kalan + ' madde' : ''));
+      durumu === 'gecildi' ? 'geçildi' : kalan + ' iş'));
     merdiven.appendChild(satir);
   }
   const son = esikler[esikler.length - 1];
   if (son) {
+    /* İki sayı, iki taban — sayfada yazılı olmazsa yan yana durmaları
+       yanıltıcı: çubuk fazın kendi içindeki oran, sağdaki sayı ise genel
+       ölçekte o kapının eşiği. */
     merdiven.appendChild(el('p', 'small',
-      'Son kapı %' + son.pct.toFixed(0) + '\'te — %100\'de değil. Kalan pay ' +
+      'Çubuk o fazın çekirdek maddelerinin doluluğu; sağdaki sayı ise ' +
+      'kapının sağlanabileceği en düşük <em>genel</em> çekirdek yüzdesi. ' +
+      'Son kapı %' + son.pct.toFixed(0) + '\'te — %100\'de değil: kalan pay ' +
       'merdivenin 4. basamağıdır ("Türkçe büküm + defter") ve hiçbir kapının ' +
       'şartı değildir.'));
   }
@@ -113,11 +124,17 @@ function pano(muf, durum) {
    "defter" sayfası tutmaya gerek kalmaz. Rozetin kendisi tıklanabilir
    değildir — işaretleme terminalde yapılır, title o komutu gösterir. */
 function fazSayfasiIsle(muf, durum) {
-  const rozetler = document.querySelectorAll('.madde[id]');
+  /* Bir madde bir faz sayfasında birden çok kez anılabilir (aynı kaynak iki
+     haftaya yayılır). id yalnız İLK geçişte olabilir — HTML'de id benzersiz
+     olmak zorunda — o yüzden tekrarlar data-madde taşır. Yalnız id'lileri
+     seçmek, tamamlanmış bir maddenin ikinci kopyasını "hiç başlanmamış"
+     görünümünde bırakıyordu. */
+  const rozetler = document.querySelectorAll('.madde[id], .madde[data-madde]');
   if (!rozetler.length) return;
   const h = hesap(muf, durum);
   for (const r of rozetler) {
-    const it = muf.items.find(i => i.id === r.id);
+    const kimlik = r.id || r.dataset.madde;
+    const it = muf.items.find(i => i.id === kimlik);
     if (!it) continue;
     const n = h.n(it.id), ad = basamakAdlari(muf, it);
     r.classList.add(n >= esik(it) ? 'tamam' : n > 0 ? 'basladi' : 'bos');
@@ -128,14 +145,23 @@ function fazSayfasiIsle(muf, durum) {
   }
 }
 
+/* Hata HER sayfada görünür olmalı. #pano yalnız index.html'de var; faz
+   sayfalarında okuma başarısız olursa hiçbir rozet çizilmiyor ve eskiden
+   hiçbir şey de söylenmiyordu — sayfa "bu özellik yok" gibi görünüyordu.
+   "Bir şey kısmi ya da başarısızsa açıkça söylenir" kuralı buraya da işler. */
+function uyar(mesaj) {
+  const kap = document.getElementById('pano');
+  const kutu = el('p', 'uyari', mesaj);
+  if (kap) { kap.innerHTML = ''; kap.appendChild(kutu); return; }
+  const sarmal = document.querySelector('.wrap');
+  if (sarmal) sarmal.insertBefore(kutu, sarmal.firstChild);
+}
+
 veri().then(({ muf, durum }) => {
   pano(muf, durum);
   fazSayfasiIsle(muf, durum);
 }).catch((e) => {
-  const kap = document.getElementById('pano');
-  if (kap) {
-    kap.innerHTML = '<p class="uyari">Durum okunamadı (' + esc(e.message) +
-      '). Sayfa bir sunucudan açılmalı: <code>atolye site</code>. ' +
-      'Terminal her hâlükârda çalışır: <code>atolye</code></p>';
-  }
+  uyar('İlerleme verisi okunamadı (' + esc(e.message) + '), bu sayfadaki ' +
+    'basamaklar gösterilemiyor. Sayfa bir sunucudan açılmalı: ' +
+    '<code>atolye site</code>. Terminal her hâlükârda çalışır: <code>atolye</code>');
 });

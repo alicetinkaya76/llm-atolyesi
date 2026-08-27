@@ -102,6 +102,98 @@ test('kapı eşikleri müfredattan türetilir ve gerçekle uyuşur', () => {
   }
 });
 
+test('eşik gerçekten ASGARİ: kaba kuvvet daha ucuz geçen bir dizilim bulamıyor', () => {
+  /* Yukarıdaki test `esikler()`in kuralını tekrar ediyor — yani formülün
+     ULAŞILABİLİR olduğunu gösterir, EN UCUZ olduğunu değil. İddia ise
+     "kapının sağlanabileceği en düşük çekirdek yüzdesi". Burası o iddiayı
+     formülden bağımsız sınar: fazın çekirdek maddelerine verilebilecek TÜM
+     basamak kombinasyonlarını sayar, kapıyı geçenler arasındaki en küçük
+     maliyeti bulur ve formülün payıyla karşılaştırır.
+     En büyük faz 7 çekirdek madde × 5 basamak = 78.125 kombinasyon. */
+  for (const p of muf.phases) {
+    const fc = muf.items.filter(i => i.p === p.id && i.core);
+    if (!fc.length) continue;
+
+    let enUcuzKaba = Infinity;
+    const gez = (k, atama) => {
+      if (k === fc.length) {
+        const hepsi = fc.every((i, j) => atama[j] >= esik(i));
+        const biri = fc.some((i, j) => atama[j] >= tavan(i));
+        if (!hepsi || !biri) return;
+        let m = 0;
+        fc.forEach((i, j) => { m += atama[j] / tavan(i); });
+        if (m < enUcuzKaba) enUcuzKaba = m;
+        return;
+      }
+      for (let v = 0; v <= tavan(fc[k]); v++) gez(k + 1, [...atama, v]);
+    };
+    gez(0, []);
+
+    /* Formülün aynı faz için hesapladığı pay: kümülatif eşiklerin farkı. */
+    const e = hesap(muf, bosDurum(), '2026-08-27').esikler();
+    const cekirdekSayisi = muf.items.filter(i => i.core).length;
+    const idx = e.findIndex(x => x.id === p.id);
+    const pay = (e[idx].pct - (idx ? e[idx - 1].pct : 0)) * cekirdekSayisi / 100;
+
+    assert.ok(Math.abs(pay - enUcuzKaba) < 1e-9,
+      `${p.id}: formül payı ${pay.toFixed(4)}, kaba kuvvetin bulduğu asgari ${enUcuzKaba.toFixed(4)}`);
+  }
+});
+
+test('kapı kuralının ikinci yarısı gerçekten iş yapıyor (f3 tanığı)', () => {
+  /* Fazların çoğunda eşiği tavanına eşit en az bir çekirdek madde var, o
+     yüzden "biri tavanda" şartı kendiliğinden sağlanıyor ve testte görünmez
+     kalıyordu. FAZ 3'ün üç çekirdek maddesinin de tavanı eşiğinden yüksek:
+     kuralın tek gerçek tanığı orası. */
+  const f3 = muf.items.filter(i => i.p === 'f3' && i.core);
+  assert.ok(f3.length && f3.every(i => esik(i) < tavan(i)),
+    'f3 bu testin dayanağı: her çekirdek maddesinin tavanı eşiğinden yüksek olmalı');
+
+  const d = bosDurum();
+  for (const i of f3) basamakAta(d, i, esik(i), '2026-01-01');
+  assert.equal(hesap(muf, d, '2026-08-27').kapi('f3'), 'suruyor',
+    'hepsi eşikte ama biri tavanda değil → kapı geçilmemeli');
+
+  basamakAta(d, f3[0], tavan(f3[0]), '2026-01-01');
+  assert.equal(hesap(muf, d, '2026-08-27').kapi('f3'), 'gecildi');
+});
+
+test('sıradaki iş kapının İKİ şartını da güder — "bitti" derken kapı açık kalmaz', () => {
+  /* Bir kez şöyleydi: bütün çekirdek maddeler tam eşiğe çekilince araç
+     "tüm çekirdek maddeler eşiği geçti, kalanlar seçmeli" diyordu, oysa FAZ 3
+     kapısı açıktı. Yani araç, müfredatın "en olası başarısızlık biçimi" ilan
+     ettiği davranışa kendisi yönlendiriyordu. */
+  const d = bosDurum();
+  for (const i of muf.items.filter(i => i.core)) basamakAta(d, i, esik(i), '2026-01-01');
+  const h = hesap(muf, d, '2026-08-27');
+
+  assert.ok(h.sonraki, 'kapısı açık faz varken sıradaki iş boş olamaz');
+  assert.equal(h.sonraki.p, 'f3');
+  assert.equal(h.sonrakiHedef, tavan(h.sonraki), 'hedef tavan olmalı');
+  assert.ok(h.kapiyaKalan('f3').length > 0, 'açık kapıda kalan iş 0 görünmemeli');
+
+  /* Ve iş bitince gerçekten biter. */
+  basamakAta(d, h.sonraki, tavan(h.sonraki), '2026-01-01');
+  const h2 = hesap(muf, d, '2026-08-27');
+  assert.equal(h2.sonraki, null);
+  for (const p of muf.phases) {
+    if (h2.kapi(p.id) === 'yok') continue;
+    assert.equal(h2.kapi(p.id), 'gecildi', p.id + ' kapısı da geçilmiş olmalı');
+  }
+});
+
+test('fazYuzdesi çekirdek tabanlıdır — "geçildi" yazan satırın çubuğu eksik kalmaz', () => {
+  const d = bosDurum();
+  for (const i of muf.items.filter(i => i.p === 'z' && i.core)) {
+    basamakAta(d, i, tavan(i), '2026-01-01');
+  }
+  const h = hesap(muf, d, '2026-08-27');
+  assert.equal(h.kapi('z'), 'gecildi');
+  /* Seçmeli z3'e hiç dokunulmadı; yine de çubuk %100 olmalı, çünkü ölçü
+     çekirdek. Eskiden %75 çıkıyordu ve satırda "geçildi" ile yan yana duruyordu. */
+  assert.equal(h.fazYuzdesi('z'), 100);
+});
+
 test('son kapı %100 değildir — kalan pay 4. basamaktır', () => {
   const e = hesap(muf, bosDurum(), '2026-08-27').esikler();
   const son = e[e.length - 1].pct;

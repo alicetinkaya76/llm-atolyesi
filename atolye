@@ -15,7 +15,7 @@
      atolye yayinla          commit + push
      atolye site             yerel sunucu
    Çoğu komut -y ile: kaydet, commit'le, push'la. */
-import { readFileSync, writeFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, renameSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -40,8 +40,14 @@ function oku() {
     process.exit(1);
   }
 }
+/* Atomik yazma. writeFileSync dosyayı önce sıfırlar; yazma yarıda kalırsa
+   (disk dolu, Ctrl-C) durum.json 0 bayt kalır ve oku() bozuk JSON'da
+   exit(1) yaptığı için ARDINDAN HİÇBİR komut çalışmaz. Aynı dizine yazıp
+   rename etmek POSIX'te atomiktir: dosya ya eski ya yeni, asla yarım. */
 function yaz(d) {
-  writeFileSync(DURUM, JSON.stringify(d, null, 1) + '\n', 'utf8');
+  const gecici = DURUM + '.tmp';
+  writeFileSync(gecici, JSON.stringify(d, null, 1) + '\n', 'utf8');
+  renameSync(gecici, DURUM);
 }
 
 function git(...a) {
@@ -52,14 +58,29 @@ function git(...a) {
   }
 }
 
+/* YALNIZCA durum.json yayınlanır. Her git çağrısı `-- durum.json` yol
+   sınırlamasıyla koşar; sınırlama olmadan `git commit -m` o an staged olan
+   HER ŞEYİ alır ve push public bir depoya gider — yarım kalmış bir düzenleme
+   ya da yanlışlıkla `git add`lenmiş özel bir dosya, "ilerlememi kaydet"
+   komutuyla yayımlanmış olurdu. Başka staged dosya varsa dokunulmadığı
+   söylenir; sessizce dışarıda bırakmak da bir tür yalan olurdu. */
 function yayinla(mesaj) {
   if (!existsSync(join(KOK, '.git'))) return console.log('Not: git deposu değil.');
-  git('add', 'durum.json');
-  if (git('diff', '--cached', '--quiet').ok) return console.log('Değişiklik yok.');
-  const c = git('commit', '-m', mesaj);
+  git('add', '--', 'durum.json');
+  if (git('diff', '--cached', '--quiet', '--', 'durum.json').ok) {
+    return console.log('durum.json değişmedi — yayınlanacak bir şey yok.');
+  }
+  const baskaları = git('diff', '--cached', '--name-only');
+  const c = git('commit', '-m', mesaj, '--', 'durum.json');
   if (!c.ok) return console.error('commit başarısız:\n' + c.out);
   const p = git('push');
   console.log(p.ok ? '✓ Yayınlandı.' : 'UYARI: push başarısız (commit yerelde):\n' + p.out);
+  if (baskaları.ok) {
+    const kalan = baskaları.out.split('\n').map(s => s.trim()).filter(s => s && s !== 'durum.json');
+    if (kalan.length) {
+      console.log(`Not: bunlar hazırlanmıştı ama commit'e ALINMADI — ${kalan.join(', ')}`);
+    }
+  }
 }
 
 const cubuk = (pct, w = 18) => '█'.repeat(Math.round(w * pct / 100)) + '░'.repeat(w - Math.round(w * pct / 100));
@@ -81,12 +102,15 @@ function bugun(d) {
   if (h.sonraki) {
     const it = h.sonraki, ad = basamakAdlari(muf, it), n = h.n(it.id);
     console.log(`  SIRADAKİ  [${it.id}] ${it.lbl}`);
-    console.log(`            ${ad[n]} → ${ad[esik(it)]}`);
+    console.log(`            ${ad[n]} → ${ad[h.sonrakiHedef]}`);
+    if (h.sonrakiHedef >= tavan(it)) {
+      console.log(`            (${faz(it.p).tag} kapısı için bir madde tavana çıkmalı)`);
+    }
     if (it.hint) console.log(`            ${it.hint}`);
     console.log(`            plan:  ${fazSayfasi(it.p)}`);
-    console.log(`            işle:  atolye ${it.id} ${Math.min(n + 1, tavan(it))} -y`);
+    console.log(`            işle:  atolye ${it.id} ${Math.min(n + 1, h.sonrakiHedef)} -y`);
   } else {
-    console.log('  Tüm çekirdek maddeler eşiği geçti. Kalanlar seçmeli.');
+    console.log('  Bütün kapılar geçildi. Kalanlar seçmeli.');
   }
 
   console.log(`\n  BU HAFTA  ${sa(h.buHafta)} sa · toplam ${sa(h.toplamSaat)} sa / ${h.seans} seans`);
@@ -116,13 +140,14 @@ function rapor(d) {
   }
 
   const esk = h.esikler();
-  console.log('\nFazlar (eşik = kapının sağlanabileceği en düşük çekirdek %):');
+  console.log('\nFazlar (çubuk = fazın çekirdek %\'si · eşik = kapının sağlanabileceği en düşük genel çekirdek %):');
   for (const p of muf.phases) {
     const durum = { gecildi: 'GEÇİLDİ', suruyor: 'sürüyor', baslamadi: 'başlamadı', yok: '—' }[h.kapi(p.id)];
     const e = esk.find(x => x.id === p.id);
-    const kalan = h.kapiyaKalan(p.id).length;
+    const kalan = h.kapiyaKalan(p.id);
     console.log(`  ${p.tag.padEnd(6)} ${cubuk(h.fazYuzdesi(p.id))} %${String(h.fazYuzdesi(p.id)).padEnd(4)} ` +
-      `${durum.padEnd(10)} eşik %${e ? e.pct.toFixed(1) : '—'}` + (kalan ? ` · ${kalan} madde kaldı` : ''));
+      `${durum.padEnd(10)} eşik %${e ? e.pct.toFixed(1) : '—'}` +
+      (kalan.length ? ` · kalan: ${kalan.map(x => x.it.id + '→' + x.hedef).join(', ')}` : ''));
   }
 
   const ogr = d.journal.filter(e => e.ogrendim).slice(-5);
@@ -135,6 +160,10 @@ function rapor(d) {
 
 function liste(d, fid) {
   const h = hesap(muf, d);
+  if (fid && !faz(fid)) {
+    console.error(`Böyle bir faz yok: ${fid}\nFazlar: ${muf.phases.map(p => p.id).join(', ')}`);
+    process.exit(1);
+  }
   for (const p of muf.phases) {
     if (fid && p.id !== fid) continue;
     console.log(`\n${p.tag} — ${p.name}`);
@@ -146,14 +175,41 @@ function liste(d, fid) {
   console.log();
 }
 
+const ALANLAR = ['saat', 'yaptim', 'ogrendim', 'anlamadim', 'yarin'];
+
+/* Şablon ayrıştırıcı. Üç kural, üçü de bir kez kaybedilmiş nottan öğrenildi:
+   · \r kırpılır — CRLF ile kaydeden bir düzenleyicide (VS Code files.eol,
+     vim fileformat=dos) `$` satır sonundaki \r'yi eşleştiremez ve TEK BİR
+     alan bile yakalanmazdı: dolu bir not "boş seans" sayılıp siliniyordu.
+   · girintili devam satırları bir öncekine eklenir — $EDITOR çok satırlı
+     yazmaya davet eder; sessizce kırpmak veri kaybıdır.
+   · şablonda yalnız kaydedilen alanlar sorulur (eski `faz:` alanı hiçbir
+     yere yazılmıyordu; sorup atmak arayüzün yalanıydı). */
+function sablonCoz(metin) {
+  const alan = {};
+  let son = null;
+  for (const ham of metin.split('\n')) {
+    const satir = ham.replace(/\r$/, '');
+    if (satir.trim().startsWith('#')) continue;
+    const m = satir.match(/^([a-z]+):[ \t]*(.*)$/);
+    if (m && ALANLAR.includes(m[1])) {
+      son = m[1];
+      alan[son] = m[2].trim();
+    } else if (son && satir.trim()) {
+      alan[son] = (alan[son] ? alan[son] + ' ' : '') + satir.trim();
+    }
+  }
+  return alan;
+}
+
 function seansEkle(d, yay) {
   /* git commit kalıbı: şablonu $EDITOR'de aç, yorum satırlarını at.
-     Tarayıcıda bir form ve onun senkron makinesi yerine 15 satır. */
+     Tarayıcıda bir form ve onun senkron makinesi yerine ~20 satır. */
   const sablon =
 `# LLM Atölyesi — seans notu. Yorum satırları (#) yok sayılır.
-# Boş bırakırsan seans kaydedilmez.
+# Girintili satırlar bir üstteki alanın devamı sayılır.
+# Hepsini boş bırakırsan seans kaydedilmez.
 saat:
-faz: ${hesap(muf, d).sonraki ? hesap(muf, d).sonraki.p : 'z'}
 yaptim:
 ogrendim:
 anlamadim:
@@ -162,29 +218,46 @@ yarin:
   const dizin = mkdtempSync(join(tmpdir(), 'atolye-'));
   const yol = join(dizin, 'SEANS');
   writeFileSync(yol, sablon, 'utf8');
-  const ed = process.env.EDITOR || process.env.VISUAL || 'nano';
-  const r = spawnSync(ed, [yol], { stdio: 'inherit' });
-  if (r.error) { console.error(`Düzenleyici açılamadı (${ed}).`); rmSync(dizin, { recursive: true, force: true }); return; }
+
+  /* $EDITOR argüman taşıyabilir: "code --wait", "subl -w", "emacsclient -nw". */
+  const ham = (process.env.VISUAL || process.env.EDITOR || 'nano').trim();
+  const parca = ham.split(/\s+/);
+  const r = spawnSync(parca[0], [...parca.slice(1), yol], { stdio: 'inherit' });
+  if (r.error) {
+    console.error(`Düzenleyici açılamadı (${ham}): ${r.error.message}`);
+    console.error(`Not şurada duruyor: ${yol}`);
+    return;
+  }
 
   const metin = readFileSync(yol, 'utf8');
-  rmSync(dizin, { recursive: true, force: true });
+  const alan = sablonCoz(metin);
+  const saat = parseFloat(String(alan.saat || '').replace(',', '.')) || 0;
 
-  const alan = {};
-  for (const satir of metin.split('\n')) {
-    if (satir.trim().startsWith('#')) continue;
-    const m = satir.match(/^(saat|faz|yaptim|ogrendim|anlamadim|yarin):\s*(.*)$/);
-    if (m) alan[m[1]] = m[2].trim();
+  /* Kayıt kapısı BÜTÜN alanlara bakar. Eskiden yalnız saat+yaptim'e
+     bakıyordu; saat girmeyi unutup sadece "yarın ilk iş"i yazan kullanıcının
+     notu — panonun en üstte gösterdiği tek ileriye dönük veri — sessizce
+     çöpe gidiyordu. Ve geçici dosya ayrıştırmadan önce silindiği için
+     metnin tek kopyası da yok oluyordu; artık yalnız kayıt başarılıysa
+     siliniyor. */
+  const doluMu = saat > 0 || ALANLAR.some(a => a !== 'saat' && alan[a]);
+  if (!doluMu) {
+    rmSync(dizin, { recursive: true, force: true });
+    return console.log('Boş seans — kaydedilmedi.');
   }
-  const saat = parseFloat(String(alan.saat).replace(',', '.')) || 0;
-  if (!saat && !alan.yaptim) return console.log('Boş seans — kaydedilmedi.');
 
-  d.journal.push({
+  /* Durumu editörden SONRA yeniden oku. Not yazmak dakikalar sürebilir;
+     bu arada başka bir terminalde `atolye f1a 3` koşulduysa, süreç başında
+     alınmış anlık görüntüyü geri yazmak o basamağı siler. Tek yazıcı
+     kendisiyle de yarışabilir. */
+  const taze = oku();
+  taze.journal.push({
     date: bugunIso(), hours: saat,
     yaptim: alan.yaptim || '', ogrendim: alan.ogrendim || '',
     anlamadim: alan.anlamadim || '', yarin: alan.yarin || ''
   });
-  yaz(d);
-  console.log(`Seans kaydedildi: ${sa(saat)} sa. Bu hafta ${sa(hesap(muf, d).buHafta)} sa.`);
+  yaz(taze);
+  rmSync(dizin, { recursive: true, force: true });
+  console.log(`Seans kaydedildi: ${sa(saat)} sa. Bu hafta ${sa(hesap(muf, taze).buHafta)} sa.`);
   if (yay) yayinla(`seans: ${bugunIso()} (${sa(saat)} sa)` + (alan.yaptim ? ` — ${alan.yaptim.slice(0, 60)}` : ''));
 }
 

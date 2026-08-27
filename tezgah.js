@@ -6,7 +6,10 @@
    · Fertility tek başına anlamsızdır — hep bir kıyas noktasıyla gösterilir
      (aynı korpus, farklı desen/sözlük).
    · Örneklem boyutu her zaman yazılır; küçük korpusta sayı oynak.
-   · Hiçbir sayı elle yazılmaz, hepsi koddan üretilir. */
+   · KULLANICININ sayıları elle yazılmaz, hepsi onun metninden üretilir.
+     Elle yazılı tek küme aşağıdaki KIYAS dizisi ile %TR kalibrasyon
+     aralıklarıdır; bunlar yayımlanmış ölçümlerdir, kaynakları yanlarında
+     ve sayfada da böyle işaretlenir. */
 (function () {
   'use strict';
   var B = window.BPE;
@@ -224,7 +227,12 @@
     kap.appendChild(el('h3', null, 'Bu sayı iyi mi kötü mü? Kıyas noktaları'));
     var kmax = Math.max(o.fertility, 4);
     var kl = el('div', 'kiyas');
-    KIYAS.concat([{ ad: 'SENİN TOKENIZER\'IN', v: o.fertility, not: 'bu sayfada, ayrılmış kesitte', ben: true }])
+    KIYAS.concat([{ ad: 'SENİN TOKENIZER\'IN', v: o.fertility,
+      /* Etiket ölçümün gerçekte nerede yapıldığını söyler. Koşulsuz
+         'ayrılmış kesitte' yazmak, kısa metinde sayfanın hemen üstünde
+         duran 'ölçüm eğitim metninin kendisinde' uyarısıyla çelişiyordu. */
+      not: ayrilmisMi ? 'bu sayfada, ayrılmış kesitte' : 'bu sayfada, EĞİTİM metninde (iyimser)',
+      ben: true }])
       .sort(function (a, b2) { return a.v - b2.v; })
       .forEach(function (k) {
         var sat = el('div', 'kiyas-satir' + (k.ben ? ' ben' : ''));
